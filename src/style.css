@@ -11,8 +11,9 @@ body {
   background-color: #f0f0f0;
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
 #app {
@@ -21,10 +22,11 @@ body {
   justify-content: center;
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 
 #background {
-  z-index: 0;
+  /* z-index: 0; */
   position: absolute;
   width: 200%;
   height: 200%;
