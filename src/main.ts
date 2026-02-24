@@ -1,12 +1,19 @@
 import "./style.css"
-import { addGuitarOutline } from "./components/guitar"
+import { Guitar } from "./components/guitar"
+import { AudioController } from "./components/audio-controller"
+;(async () => {
+    const audioController = new AudioController()
+    await audioController.init()
+    // audioController.setMode("sine")
+    audioController.setMode("guitar")
 
-document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-    <div>
-        <h1>Visualize how a guitar works</h1>
-    </div>
-    <div id="background"></div>
-`
+    // A4 note (440 Hz), B4 note (493.88 Hz), C5 note (523.25 Hz)
 
-addGuitarOutline(document.getElementById("app")!)
+    const onclick = () => {
+        audioController.startLoop(523.25)
+    }
+
+    const guitar = new Guitar(document.getElementById("app")!, onclick)
+    guitar.addGuitarOutline()
+})()
 
