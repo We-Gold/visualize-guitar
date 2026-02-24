@@ -1,6 +1,7 @@
 import "./style.css"
 import { Guitar } from "./components/guitar"
-import { AudioController } from "./components/audio-controller"
+import { AudioController } from "./audio/audio-controller"
+import { audioModes } from "./audio/audio-modes"
 ;(async () => {
     const audioController = new AudioController()
     await audioController.init()
@@ -9,11 +10,20 @@ import { AudioController } from "./components/audio-controller"
         // Trigger on user interaction to comply with browser autoplay policies
         await audioController.resumeAudioContext()
 
-        await audioController.midiPlayer.load("/the-last-of-us-tab.mid", {
-            durationMultiplier: 2.5,
-            velocityMultiplier: 0.7,
-        })
-        audioController.midiPlayer.play()
+        const audioMode = audioModes[1]
+
+        if (audioMode.type === "midi") {
+            await audioController.midiPlayer.load(
+                audioMode.midiPath,
+                audioMode.playConfig,
+            )
+            audioController.midiPlayer.play()
+        } else if (audioMode.type === "loop") {
+            audioController.loopPlayer.play(
+                audioMode.noteName,
+                audioMode.intervalSeconds,
+            )
+        }
     }
 
     const guitar = new Guitar(document.getElementById("app")!, onclick)

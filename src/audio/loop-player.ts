@@ -17,7 +17,7 @@ export class LoopPlayer {
         }
 
         this.isPlaying = true
-        const duration = Math.min(intervalSeconds * 0.8, 0.4) // Use 80% of interval or 0.4s
+        const duration = Math.min(intervalSeconds * 0.8, 1) // Use 80% of interval or 0.4s
 
         // Play first note immediately
         this.sampler.play(noteName, duration, Tone.now())
