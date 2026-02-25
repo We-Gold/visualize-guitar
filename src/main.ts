@@ -1,6 +1,7 @@
 import "./style.css"
 import { Guitar } from "./components/guitar"
 import { FrequencyPlotter } from "./components/frequency-plotter"
+import { WaveformPlotter } from "./components/waveform-plotter"
 import { AudioController } from "./audio/audio-controller"
 import { audioModes } from "./audio/audio-modes"
 ;(async () => {
@@ -9,6 +10,9 @@ import { audioModes } from "./audio/audio-modes"
 
     // Create frequency plotter
     const plotter = new FrequencyPlotter("#frequency-plot", 300, 180)
+
+    // Create waveform plotter
+    const waveformPlotter = new WaveformPlotter("#waveform-plot", 400, 150)
 
     let animationFrameId: number | null = null
     let unsubscribeListener: (() => void) | null = null
@@ -36,6 +40,7 @@ import { audioModes } from "./audio/audio-modes"
         if (unsubscribeListener) unsubscribeListener()
         unsubscribeListener = audioController.onAnalyzerUpdate((state) => {
             plotter.updateBars(state)
+            waveformPlotter.updateWaveform(state)
         })
 
         // Start animation loop for real-time updates

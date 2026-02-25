@@ -46,6 +46,14 @@ body {
 #frequency-plot svg {
   filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.2));
 }
+
+#waveform-plot {
+  font-family: 'Inconsolata', monospace;
+}
+
+#waveform-plot svg {
+  filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.2));
+}
 /*
 .super-improved {
   background: radial-gradient(
