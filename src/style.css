@@ -38,6 +38,14 @@ body {
   );
   transform: rotate(-30deg);
 }
+
+#frequency-plot {
+  font-family: 'Inconsolata', monospace;
+}
+
+#frequency-plot svg {
+  filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.2));
+}
 /*
 .super-improved {
   background: radial-gradient(
