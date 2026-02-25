@@ -35,27 +35,9 @@ export const audioModes: AudioMode[] = [
         intervalSeconds: 3,
     },
     {
-        type: "midi",
-        name: "The Last of Us",
-        midiPath: "/the-last-of-us.mid",
-        playConfig: {
-            durationMultiplier: 2.5,
-            velocityMultiplier: 0.7,
-        },
-    },
-    {
         type: "json",
         name: "The Last of Us (JSON)",
-        jsonPath: "/data/the-last-of-us-tab.json",
-        playConfig: {
-            durationMultiplier: 2.5,
-            velocityMultiplier: 0.7,
-        },
-    },
-    {
-        type: "json",
-        name: "The Last of Us (JSON)",
-        jsonPath: "/data/reference-midi.json",
+        jsonPath: "/data/the-last-of-us.json",
         playConfig: {
             durationMultiplier: 2.5,
             velocityMultiplier: 0.7,
