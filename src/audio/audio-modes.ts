@@ -16,23 +16,17 @@ export interface JSONAudioMode {
         durationMultiplier?: number
         velocityMultiplier?: number
     }
+    loop?: boolean | { intervalSeconds?: number }
 }
 
-export interface LoopAudioMode {
-    type: "loop"
-    name: string
-    noteName: string
-    intervalSeconds?: number
-}
-
-export type AudioMode = MidiAudioMode | LoopAudioMode | JSONAudioMode
+export type AudioMode = MidiAudioMode | JSONAudioMode
 
 export const audioModes: AudioMode[] = [
     {
-        type: "loop",
+        type: "json",
         name: "Loop E2",
-        noteName: "E2",
-        intervalSeconds: 3,
+        jsonPath: "/data/loop-e2.json",
+        loop: { intervalSeconds: 1 },
     },
     {
         type: "json",
@@ -46,7 +40,7 @@ export const audioModes: AudioMode[] = [
 ]
 
 export interface JSONAudioFile {
-    meta: {
+    meta?: {
         title: string
         tempo: number
         timeSignature: [number, number]

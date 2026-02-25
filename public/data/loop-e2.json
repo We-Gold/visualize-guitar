@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "title": "E2 Loop",
+    "tempo": 120,
+    "timeSignature": [4, 4],
+    "tuning": [64, 59, 55, 50, 45, 40]
+  },
+  "tracks": [
+    {
+      "name": "E2 Note",
+      "notes": [
+        {
+          "duration": 3,
+          "midi": 40,
+          "name": "E2",
+          "time": 0,
+          "velocity": 0.6,
+          "string": 6,
+          "fret": 0
+        }
+      ]
+    }
+  ]
+}

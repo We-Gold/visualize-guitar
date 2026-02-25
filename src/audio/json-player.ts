@@ -11,6 +11,9 @@ export class JSONPlayer {
     private sampler: GuitarSampler
     private jsonData?: JSONAudioFile
     private isPlaying = false
+    private shouldLoop = false
+    private loopConfig?: boolean | { intervalSeconds?: number }
+    private playTimeoutId?: number
     private playConfig: PlayConfig = {
         durationMultiplier: 1,
         velocityMultiplier: 1,
@@ -20,8 +23,13 @@ export class JSONPlayer {
         this.sampler = sampler
     }
 
-    async load(jsonPath: string, playConfig?: PlayConfig): Promise<void> {
+    async load(
+        jsonPath: string,
+        playConfig?: PlayConfig,
+        loopConfig?: boolean | { intervalSeconds?: number },
+    ): Promise<void> {
         this.playConfig = playConfig ?? this.playConfig
+        this.loopConfig = loopConfig
         try {
             const response = await fetch(jsonPath)
             const jsonData = await response.json()
@@ -44,6 +52,7 @@ export class JSONPlayer {
         }
 
         this.isPlaying = true
+        this.shouldLoop = !!this.loopConfig
         const now = Tone.now()
 
         try {
@@ -66,8 +75,22 @@ export class JSONPlayer {
                 ),
             )
 
-            setTimeout(() => {
+            this.playTimeoutId = window.setTimeout(() => {
                 this.isPlaying = false
+
+                // Handle looping if configured
+                if (this.shouldLoop && this.loopConfig) {
+                    const loopInterval =
+                        typeof this.loopConfig === "object"
+                            ? (this.loopConfig.intervalSeconds ?? maxTime)
+                            : maxTime
+
+                    this.playTimeoutId = window.setTimeout(() => {
+                        if (this.shouldLoop) {
+                            this.play()
+                        }
+                    }, loopInterval * 1000)
+                }
             }, maxTime * 1000)
         } catch (error) {
             console.error("Error playing JSON data:", error)
@@ -76,7 +99,20 @@ export class JSONPlayer {
     }
 
     stop(): void {
+        this.shouldLoop = false
         this.isPlaying = false
+        if (this.playTimeoutId !== undefined) {
+            window.clearTimeout(this.playTimeoutId)
+            this.playTimeoutId = undefined
+        }
+    }
+
+    setLooping(enabled: boolean): void {
+        this.shouldLoop = enabled
+    }
+
+    getLooping(): boolean {
+        return this.shouldLoop
     }
 
     isCurrentlyPlaying(): boolean {

@@ -59,13 +59,9 @@ import { audioModes } from "./audio/audio-modes"
             await audioController.jsonPlayer.load(
                 audioMode.jsonPath,
                 audioMode.playConfig,
+                audioMode.loop,
             )
             audioController.jsonPlayer.play()
-        } else if (audioMode.type === "loop") {
-            audioController.loopPlayer.play(
-                audioMode.noteName,
-                audioMode.intervalSeconds,
-            )
         }
     }
 
