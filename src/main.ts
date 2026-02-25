@@ -30,6 +30,14 @@ import { audioModes } from "./audio/audio-modes"
                 audioMode.intervalSeconds,
             )
         }
+
+        setTimeout(() => {
+            audioController.updateAnalyzerState()
+            console.log(
+                "FFT Values:",
+                audioController.getAnalyzerState().fftValues,
+            )
+        }, 1000)
     }
 
     const guitar = new Guitar(document.getElementById("app")!, onclick)
