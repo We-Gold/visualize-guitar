@@ -164,10 +164,6 @@ def parse_gp5_and_midi(input_gp5, input_midi, output_file):
                                 print(f"  Existing mapping: string {existing_mapping['string']}, fret {existing_mapping['fret']}")
                                 print(f"  New mapping: string {string_number}, fret {fret}")
 
-    print("GP5 Note Mapping (MIDI pitch -> string/fret):")
-    for midi_pitch, mapping in gp5_note_mapping.items():
-        print(f"  MIDI pitch {midi_pitch}: string {mapping['string']}, fret {mapping['fret']}")
-
     ### Part 2: Parse the MIDI file and create the output JSON, enriching MIDI notes with string/fret info from the GP5 mapping
     midi_song = MidiFile(input_midi)
 
@@ -284,16 +280,28 @@ def parse_gp5_and_midi(input_gp5, input_midi, output_file):
     with open(output_file, "w") as f:
         json.dump(output, f, indent=2)
     
-    print(f"Exported JSON to {output_file}")
-
 if __name__ == "__main__":
-    parse_gp5_and_midi("../data/the-last-of-us-tab.gp5", "../data/the-last-of-us.mid", "../public/data/the-last-of-us.json")
+    if len(sys.argv) != 4:
+        DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # if len(sys.argv) != 3:
-    #     DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        # Find all folders within the input directory. For each folder, find the .gp5 file and the .mid file regardless of their names, and parse them together. 
+        # Output the JSON file with the same name as the folder.
+        for folder in DEFAULT_INPUT_DIR.iterdir():
+            if folder.is_dir():
+                gp5_file = None
+                midi_file = None
 
-    #     for file in DEFAULT_INPUT_DIR.glob("*.gp5"):
-    #         output_file = DEFAULT_OUTPUT_DIR / (file.stem + ".json")
-    #         parse_gp5(file, output_file)
-    # else:
-    #     parse_gp5(Path(sys.argv[1]), Path(sys.argv[2]))
+                for file in folder.iterdir():
+                    if file.suffix == ".gp5":
+                        gp5_file = file
+                    elif file.suffix == ".mid":
+                        midi_file = file
+
+                if gp5_file and midi_file:
+                    output_file = DEFAULT_OUTPUT_DIR / (folder.name + ".json")
+                    print(f"Processing folder '{folder.name}': GP5='{gp5_file.name}', MIDI='{midi_file.name}' -> Output='{output_file.name}'")
+                    parse_gp5_and_midi(gp5_file, midi_file, output_file)
+                else:
+                    print(f"Warning: Folder '{folder.name}' does not contain both a .gp5 and a .mid file. Skipping.")
+    else:
+        parse_gp5_and_midi(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]))
