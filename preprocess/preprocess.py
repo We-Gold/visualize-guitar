@@ -100,12 +100,13 @@ def parse_gp5(input_file, output_file):
 
                         track_data["notes"].append({
                             "id": len(track_data["notes"]),
-                            "start": round(start_seconds, 6),
-                            "duration": round(duration_seconds, 6),
-                            "note": note_name,
-                            "velocity": round(velocity, 3),
+                            "duration": duration_seconds,
+                            "midi": midi_pitch,
+                            "name": note_name,
+                            "time": start_seconds,
+                            "velocity": velocity,
                             "string": string_number,
-                            "fret": fret
+                            "fret": fret,
                         })
 
         output["tracks"].append(track_data)

@@ -2,6 +2,7 @@ import * as Tone from "tone"
 import { GuitarSampler } from "./guitar-sampler"
 import { MidiPlayer } from "./midi-player"
 import { LoopPlayer } from "./loop-player"
+import { JSONPlayer } from "./json-player"
 
 export class AudioController {
     private ctx!: AudioContext
@@ -10,6 +11,7 @@ export class AudioController {
     public guitarSampler!: GuitarSampler
     public midiPlayer!: MidiPlayer
     public loopPlayer!: LoopPlayer
+    public jsonPlayer!: JSONPlayer
 
     async init() {
         // Create AudioContext (will be suspended until user gesture)
@@ -43,6 +45,7 @@ export class AudioController {
         // Create the players
         this.midiPlayer = new MidiPlayer(this.guitarSampler)
         this.loopPlayer = new LoopPlayer(this.guitarSampler)
+        this.jsonPlayer = new JSONPlayer(this.guitarSampler)
     }
 }
 
