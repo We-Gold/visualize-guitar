@@ -26,103 +26,6 @@ def midi_to_note_name(midi):
     name = NOTE_NAMES[midi % 12]
     return f"{name}{octave}"
 
-
-def ticks_to_seconds(ticks, ticks_per_beat, tempo, denominator):
-    """
-    Convert ticks to seconds (denominator-aware).
-    """
-    quarter_per_unit = 4 / denominator
-    ticks_per_quarter = ticks_per_beat / quarter_per_unit
-    seconds_per_quarter = 60.0 / tempo
-    return (ticks / ticks_per_quarter) * seconds_per_quarter
-
-
-def parse_gp5(input_file, output_file):
-    """
-    Parses a Guitar Pro 5 file and exports it as a JSON file with note data for visualization.
-    """
-    song = guitarpro.parse(input_file)
-
-    tempo = song.tempo
-
-    output = {
-        "meta": {
-            "title": song.title or Path(input_file).stem,
-            "tempo": tempo,
-            "timeSignature": [
-                song.tracks[0].measures[0].timeSignature.numerator,
-                song.tracks[0].measures[0].timeSignature.denominator.value,
-            ],
-            "tuning": STANDARD_TUNING,
-        },
-        "tracks": []
-    }
-
-    for track in song.tracks:
-        if track.isPercussionTrack:
-            continue
-
-        track_data = {
-            "name": track.name,
-            "notes": []
-        }
-
-        for measure in track.measures:
-            ts = measure.timeSignature
-            numerator = ts.numerator
-            denominator = ts.denominator.value
-
-            ticks_per_beat = measure.length / numerator
-
-            for voice in measure.voices:
-                for beat in voice.beats:
-                    absolute_ticks = measure.start + beat.start
-
-                    start_seconds = ticks_to_seconds(
-                        absolute_ticks,
-                        ticks_per_beat,
-                        tempo,
-                        denominator
-                    )
-
-                    duration_seconds = ticks_to_seconds(
-                        beat.duration.time,
-                        ticks_per_beat,
-                        tempo,
-                        denominator
-                    )
-
-                    for note in beat.notes:
-                        string_number = note.string
-                        fret = note.value
-                        velocity = note.velocity / 127.0
-
-                        # MIDI pitch from string + fret
-                        string_index = 6 - string_number
-                        midi_pitch = STANDARD_TUNING[string_index] + fret
-
-                        note_name = midi_to_note_name(midi_pitch)
-
-                        track_data["notes"].append({
-                            "id": len(track_data["notes"]),
-                            "duration": duration_seconds,
-                            "midi": midi_pitch,
-                            "name": note_name,
-                            "time": start_seconds,
-                            "velocity": velocity,
-                            "string": string_number,
-                            "fret": fret,
-                        })
-
-        output["tracks"].append(track_data)
-
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(output_file, "w") as f:
-        json.dump(output, f, indent=2)
-
-    print(f"Exported JSON to {output_file}")
-
 def parse_gp5_and_midi(input_gp5, input_midi, output_file):
     """
     Parses a Guitar Pro 5 file and its corresponding MIDI file, then exports combined data as JSON.
@@ -181,12 +84,14 @@ def parse_gp5_and_midi(input_gp5, input_midi, output_file):
         note_data_list = []
         note_queue = {}  # Maps MIDI pitch -> list of pending note_on events
         absolute_time_seconds = 0.0
+        absolute_ticks = 0
         tempo_usec = 500000  # Default tempo: 120 BPM = 500000 microseconds per beat
         channel_percussion = set()  # Track which channels are percussion (MIDI channel 9)
 
         for msg in track:
             # Accumulate absolute time from delta time
             absolute_time_seconds += mido.tick2second(msg.time, midi_song.ticks_per_beat, tempo_usec)
+            absolute_ticks += msg.time
 
             if msg.type == "set_tempo":
                 tempo_usec = msg.tempo
@@ -208,6 +113,7 @@ def parse_gp5_and_midi(input_gp5, input_midi, output_file):
                         note_queue[midi_pitch] = []
                     note_queue[midi_pitch].append({
                         "absolute_time": absolute_time_seconds,
+                        "absolute_ticks": absolute_ticks,
                         "velocity": velocity,
                         "channel": msg.channel,
                         "midi_pitch": midi_pitch
@@ -218,13 +124,16 @@ def parse_gp5_and_midi(input_gp5, input_midi, output_file):
                     if midi_pitch in note_queue and len(note_queue[midi_pitch]) > 0:
                         note_on_data = note_queue[midi_pitch].pop(0)  # FIFO
                         duration = absolute_time_seconds - note_on_data["absolute_time"]
+                        duration_ticks = absolute_ticks - note_on_data["absolute_ticks"]
                         
                         # Skip percussion channel notes
                         if note_on_data["channel"] != 9:
                             note_data = {
                                 "duration": duration,
+                                "durationTicks": duration_ticks,
                                 "midi": midi_pitch,
                                 "name": midi_to_note_name(midi_pitch),
+                                "ticks": note_on_data["absolute_ticks"],
                                 "time": note_on_data["absolute_time"],
                                 "velocity": note_on_data["velocity"],
                                 "string": None,  # To be filled from GP5 mapping
@@ -243,13 +152,16 @@ def parse_gp5_and_midi(input_gp5, input_midi, output_file):
                 if midi_pitch in note_queue and len(note_queue[midi_pitch]) > 0:
                     note_on_data = note_queue[midi_pitch].pop(0)  # FIFO
                     duration = absolute_time_seconds - note_on_data["absolute_time"]
+                    duration_ticks = absolute_ticks - note_on_data["absolute_ticks"]
                     
                     # Skip percussion channel notes
                     if note_on_data["channel"] != 9:
                         note_data = {
                             "duration": duration,
+                            "durationTicks": duration_ticks,
                             "midi": midi_pitch,
                             "name": midi_to_note_name(midi_pitch),
+                            "ticks": note_on_data["absolute_ticks"],
                             "time": note_on_data["absolute_time"],
                             "velocity": note_on_data["velocity"],
                             "string": None,  # To be filled from GP5 mapping
