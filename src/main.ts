@@ -71,12 +71,11 @@ import { audioModes } from "./audio/audio-modes"
                 audioMode.playConfig,
                 audioMode.loop,
             )
-            audioController.jsonPlayer.play()
-
-            // Start visualization synced to the audio start time
-            guitar.startVisualization(
-                audioController.jsonPlayer.getPlayStartTime(),
+            // Re-sync the visualizer on every loop iteration
+            audioController.jsonPlayer.onPlay((t) =>
+                guitar.startVisualization(t),
             )
+            audioController.jsonPlayer.play()
         }
     }
 

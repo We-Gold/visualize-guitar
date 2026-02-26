@@ -1,7 +1,5 @@
 import * as d3 from "d3"
 
-// --- SVG coordinate constants for strings (from Guitar.svg) ---
-
 /** Per-string configuration derived from the SVG */
 interface StringConfig {
     groupId: string

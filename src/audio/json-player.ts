@@ -15,6 +15,7 @@ export class JSONPlayer {
     private loopConfig?: boolean | { intervalSeconds?: number }
     private playTimeoutId?: number
     private playStartTime = 0
+    private onPlayCallback?: (playStartTime: number) => void
     private playConfig: PlayConfig = {
         durationMultiplier: 1,
         velocityMultiplier: 1,
@@ -56,6 +57,7 @@ export class JSONPlayer {
         this.shouldLoop = !!this.loopConfig
         const now = Tone.now()
         this.playStartTime = now
+        this.onPlayCallback?.(this.playStartTime)
 
         try {
             // Schedule all notes from all tracks
@@ -123,6 +125,10 @@ export class JSONPlayer {
 
     getPlayStartTime(): number {
         return this.playStartTime
+    }
+
+    onPlay(cb: (playStartTime: number) => void): void {
+        this.onPlayCallback = cb
     }
 }
 
