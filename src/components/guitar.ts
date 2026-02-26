@@ -36,9 +36,12 @@ export class Guitar {
     /**
      * Load JSON audio file data into the visualizer
      */
-    async load(jsonData: JSONAudioFile): Promise<void> {
+    async load(
+        jsonData: JSONAudioFile,
+        durationMultiplier?: number,
+    ): Promise<void> {
         if (this.visualizer) {
-            await this.visualizer.load(jsonData)
+            await this.visualizer.load(jsonData, durationMultiplier)
         }
     }
 

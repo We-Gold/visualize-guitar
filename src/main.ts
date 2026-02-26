@@ -61,7 +61,10 @@ import { audioModes } from "./audio/audio-modes"
             // Load audio data and pass to guitar visualizer
             const response = await fetch(audioMode.jsonPath)
             const jsonData = await response.json()
-            await guitar.load(jsonData)
+            await guitar.load(
+                jsonData,
+                audioMode.playConfig?.durationMultiplier,
+            )
 
             await audioController.jsonPlayer.load(
                 audioMode.jsonPath,

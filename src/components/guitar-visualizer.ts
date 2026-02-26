@@ -1,5 +1,7 @@
 import * as d3 from "d3"
 import type { JSONAudioFile } from "../audio/audio-modes"
+import { StringAnimator } from "./string-animator"
+import type { ActiveNote } from "./string-animator"
 
 // --- SVG coordinate constants (derived from Guitar.svg) ---
 
@@ -60,7 +62,7 @@ const FINGER_RADIUS = 7.443
 const STRUM_RADIUS = 6
 
 /** Maximum display duration for strum circles (in seconds) */
-const MAX_STRUM_DURATION = 0.4
+const MAX_STRUM_DURATION = 0.2
 
 // --- Types ---
 
@@ -70,6 +72,7 @@ interface NoteWithKey {
     duration: number
     string: number
     fret: number
+    velocity: number
 }
 
 /**
@@ -95,12 +98,14 @@ export class GuitarVisualizer {
     private svg: d3.Selection<SVGElement, unknown, null, undefined>
     private fingersGroup!: d3.Selection<SVGGElement, unknown, null, undefined>
     private strumsGroup!: d3.Selection<SVGGElement, unknown, null, undefined>
+    private stringAnimator: StringAnimator
     private notes: NoteWithKey[] = []
     private playStartTime = 0
     private isActive = false
 
     constructor(svgElement: SVGElement) {
         this.svg = d3.select(svgElement)
+        this.stringAnimator = new StringAnimator(svgElement)
         this.initGroups()
     }
 
@@ -156,7 +161,10 @@ export class GuitarVisualizer {
      * Load note data from the JSON audio file.
      * Pre-processes notes into a flat, sorted array with unique keys.
      */
-    async load(jsonData: JSONAudioFile): Promise<void> {
+    async load(
+        jsonData: JSONAudioFile,
+        durationMultiplier: number = 1,
+    ): Promise<void> {
         this.notes = []
         let noteIndex = 0
 
@@ -165,9 +173,10 @@ export class GuitarVisualizer {
                 this.notes.push({
                     key: `n${noteIndex++}`,
                     time: note.time,
-                    duration: note.duration,
+                    duration: note.duration * durationMultiplier,
                     string: note.string,
                     fret: note.fret,
+                    velocity: note.velocity,
                 })
             })
         })
@@ -191,6 +200,7 @@ export class GuitarVisualizer {
         this.isActive = false
         this.fingersGroup.selectAll("*").remove()
         this.strumsGroup.selectAll("*").remove()
+        this.stringAnimator.stopAll()
     }
 
     /**
@@ -206,6 +216,9 @@ export class GuitarVisualizer {
         const activeNotes = this.notes.filter(
             (n) => n.time <= elapsed && elapsed < n.time + n.duration,
         )
+
+        // --- String vibration ---
+        this.stringAnimator.updateAll(elapsed, activeNotes as ActiveNote[])
 
         // --- Fret finger indicators (only for fretted notes, fret > 0) ---
         const frettedNotes = activeNotes.filter((n) => n.fret > 0)
