@@ -318,6 +318,7 @@ export class GuitarVisualizer {
                         (elapsed - state.fadeStartElapsed) / FADE_DURATION,
                     )
                     circle?.attr("fill-opacity", (1 - easeOut(progress)) * 0.55)
+                    circle?.attr("stroke-opacity", 1 - easeOut(progress))
                     if (progress >= 1) {
                         this.hideFingerCircle(s)
                     }
@@ -358,6 +359,7 @@ export class GuitarVisualizer {
                     .attr("r", FINGER_RADIUS)
                     .attr("fill", STRING_COLORS[s])
                     .attr("fill-opacity", 0)
+                    .attr("stroke-opacity", 0)
                     .attr("stroke", "url(#dynamic-finger-stroke)")
                     .attr("stroke-width", 1.2)
             } else if (desiredX !== state.targetX) {
@@ -389,6 +391,10 @@ export class GuitarVisualizer {
                 this.fingerCircles[s]!.attr(
                     "fill-opacity",
                     easeOut(fadeProgress) * 0.55,
+                )
+                this.fingerCircles[s]!.attr(
+                    "stroke-opacity",
+                    easeOut(fadeProgress),
                 )
                 if (fadeProgress >= 1) state.fadePhase = "stable"
             }
