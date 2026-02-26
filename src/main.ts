@@ -66,6 +66,6 @@ import { audioModes } from "./audio/audio-modes"
     }
 
     const guitar = new Guitar(document.getElementById("app")!, onclick)
-    guitar.addGuitarOutline()
+    guitar.addGuitar()
 })()
 

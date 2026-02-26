@@ -1,5 +1,6 @@
-// import guitarOutline from "../assets/guitar-outline.svg"
-import guitar from "../assets/Guitar.svg"
+import * as d3 from "d3"
+
+const GUITAR_SVG_PATH = "./img/Guitar.svg"
 
 export class Guitar {
     private container: HTMLElement
@@ -11,17 +12,12 @@ export class Guitar {
         }
     }
 
-    addGuitarOutline() {
-        const img = document.createElement("img")
-        img.src = guitar
-        img.alt = "Guitar Outline"
-        img.style.width = "80%"
-        img.style.height = "auto"
-        img.style.position = "absolute"
-        img.style.top = "50%"
-        img.style.left = "55%"
-        img.style.transform = "translate(-50%, -50%)"
-        this.container.appendChild(img)
+    addGuitar() {
+        d3.xml(GUITAR_SVG_PATH).then((xml) => {
+            const svg = xml.documentElement
+            svg.style.zIndex = "1"
+            this.container.appendChild(svg)
+        })
     }
 }
 
