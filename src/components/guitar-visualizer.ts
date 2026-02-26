@@ -94,6 +94,21 @@ function getFretFingerX(fret: number): number | null {
     return (fretWireX + prevX) / 2
 }
 
+/**
+ * Given an array of notes, return at most one note per string,
+ * keeping the one with the latest start time (latest note wins).
+ */
+function latestNotePerString(notes: NoteWithKey[]): NoteWithKey[] {
+    const map: Record<number, NoteWithKey> = {}
+    for (const n of notes) {
+        const existing = map[n.string]
+        if (!existing || n.time > existing.time) {
+            map[n.string] = n
+        }
+    }
+    return Object.values(map)
+}
+
 export class GuitarVisualizer {
     private svg: d3.Selection<SVGElement, unknown, null, undefined>
     private fingersGroup!: d3.Selection<SVGGElement, unknown, null, undefined>
@@ -221,11 +236,14 @@ export class GuitarVisualizer {
         this.stringAnimator.updateAll(elapsed, activeNotes as ActiveNote[])
 
         // --- Fret finger indicators (only for fretted notes, fret > 0) ---
-        const frettedNotes = activeNotes.filter((n) => n.fret > 0)
+        // Deduplicate to one note per string (latest note wins), then filter for fretted
+        const frettedNotes = latestNotePerString(activeNotes).filter(
+            (n) => n.fret > 0,
+        )
 
         const fingers = this.fingersGroup
             .selectAll<SVGCircleElement, NoteWithKey>("circle")
-            .data(frettedNotes, (d) => d.key)
+            .data(frettedNotes, (d) => String(d.string))
 
         // Enter: new finger circles
         fingers
@@ -239,24 +257,27 @@ export class GuitarVisualizer {
             .attr("stroke", "url(#dynamic-finger-stroke)")
             .attr("stroke-width", 1.2)
 
-        // Update: reposition if needed (notes don't move, but ensures correctness)
+        // Update: reposition when a new note replaces an old one on the same string
         fingers
             .attr("cx", (d) => getFretFingerX(d.fret)!)
             .attr("cy", (d) => STRING_Y[d.string])
+            .attr("fill", (d) => STRING_COLORS[d.string])
 
         // Exit: remove fingers for notes that are no longer active
         fingers.exit().remove()
 
         // --- Strum indicators (for all active notes, including open strings) ---
-        // Cap the display duration for longer notes to avoid visual clutter
-        const strumsForDisplay = this.notes.filter((n) => {
-            const displayDuration = Math.min(n.duration, MAX_STRUM_DURATION)
-            return n.time <= elapsed && elapsed < n.time + displayDuration
-        })
+        // Deduplicate to one note per string (latest note wins), then cap display duration
+        const strumsForDisplay = latestNotePerString(
+            this.notes.filter((n) => {
+                const displayDuration = Math.min(n.duration, MAX_STRUM_DURATION)
+                return n.time <= elapsed && elapsed < n.time + displayDuration
+            }),
+        )
 
         const strums = this.strumsGroup
             .selectAll<SVGCircleElement, NoteWithKey>("circle")
-            .data(strumsForDisplay, (d) => d.key)
+            .data(strumsForDisplay, (d) => String(d.string))
 
         // Enter: new strum circles
         strums
