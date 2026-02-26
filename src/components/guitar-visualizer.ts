@@ -59,6 +59,9 @@ const FINGER_RADIUS = 7.443
 /** Radius for strum indicator circles */
 const STRUM_RADIUS = 6
 
+/** Maximum display duration for strum circles (in seconds) */
+const MAX_STRUM_DURATION = 0.4
+
 // --- Types ---
 
 interface NoteWithKey {
@@ -232,9 +235,15 @@ export class GuitarVisualizer {
         fingers.exit().remove()
 
         // --- Strum indicators (for all active notes, including open strings) ---
+        // Cap the display duration for longer notes to avoid visual clutter
+        const strumsForDisplay = this.notes.filter((n) => {
+            const displayDuration = Math.min(n.duration, MAX_STRUM_DURATION)
+            return n.time <= elapsed && elapsed < n.time + displayDuration
+        })
+
         const strums = this.strumsGroup
             .selectAll<SVGCircleElement, NoteWithKey>("circle")
-            .data(activeNotes, (d) => d.key)
+            .data(strumsForDisplay, (d) => d.key)
 
         // Enter: new strum circles
         strums
