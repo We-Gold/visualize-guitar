@@ -64,7 +64,15 @@ const STRUM_RADIUS = 6
 /** Maximum display duration for strum circles (in seconds) */
 const MAX_STRUM_DURATION = 0.2
 
+/** Duration of the fret-to-fret slide animation in seconds */
+const SLIDE_DURATION = 0.06
+
 // --- Types ---
+
+/** Quadratic ease-out: fast start, decelerates at target */
+function easeOut(t: number): number {
+    return 1 - (1 - t) * (1 - t)
+}
 
 interface NoteWithKey {
     key: string
@@ -73,6 +81,18 @@ interface NoteWithKey {
     string: number
     fret: number
     velocity: number
+}
+
+/** Per-string state for animated fret finger slides */
+interface FingerAnimState {
+    visible: boolean
+    currentX: number
+    targetX: number
+    animStartX: number
+    animStartElapsed: number
+    /** X position of the last fretted note on this string; retained after note ends so
+     *  the next note can slide from here. Reset to null when an open string is played. */
+    lastKnownFretX: number | null
 }
 
 /**
@@ -117,11 +137,28 @@ export class GuitarVisualizer {
     private notes: NoteWithKey[] = []
     private playStartTime = 0
     private isActive = false
+    private fingerStates: Record<number, FingerAnimState> = {}
+    private fingerCircles: Record<
+        number,
+        d3.Selection<SVGCircleElement, unknown, null, undefined> | null
+    > = {}
 
     constructor(svgElement: SVGElement) {
         this.svg = d3.select(svgElement)
         this.stringAnimator = new StringAnimator(svgElement)
         this.initGroups()
+
+        for (let s = 1; s <= 6; s++) {
+            this.fingerStates[s] = {
+                visible: false,
+                currentX: 0,
+                targetX: 0,
+                animStartX: 0,
+                animStartElapsed: 0,
+                lastKnownFretX: null,
+            }
+            this.fingerCircles[s] = null
+        }
     }
 
     /**
@@ -209,11 +246,121 @@ export class GuitarVisualizer {
     }
 
     /**
+     * Remove a single finger circle from the DOM and mark it not-visible.
+     * lastKnownFretX is intentionally preserved so the next note can slide from here.
+     */
+    private hideFingerCircle(stringNum: number): void {
+        const circle = this.fingerCircles[stringNum]
+        if (circle) {
+            circle.remove()
+            this.fingerCircles[stringNum] = null
+        }
+        this.fingerStates[stringNum].visible = false
+    }
+
+    /**
+     * Per-frame update for fret finger circles with slide animation.
+     *
+     * - Fingers slide from the previous note's fret to the new note's fret when a
+     *   new note starts on a string that had a prior fretted note.
+     * - Fingers snap on the very first appearance (no prior note on this string).
+     * - Fingers are removed immediately when the active note ends.
+     * - lastKnownFretX is cleared when an open string is played, so the next
+     *   fretted note snaps rather than sliding in from a stale position.
+     */
+    private updateFingerCircles(
+        elapsed: number,
+        activeNotes: NoteWithKey[],
+    ): void {
+        // Build a map: for each string, find the most recent active note
+        const latestByString: Record<number, NoteWithKey> = {}
+        for (const note of activeNotes) {
+            const existing = latestByString[note.string]
+            if (!existing || note.time > existing.time) {
+                latestByString[note.string] = note
+            }
+        }
+
+        for (let s = 1; s <= 6; s++) {
+            const note = latestByString[s]
+            const state = this.fingerStates[s]
+
+            // --- Determine desired position ---
+            // null means no finger should be visible
+            let desiredX: number | null = null
+            let isOpenString = false
+            if (note) {
+                if (note.fret > 0) {
+                    desiredX = getFretFingerX(note.fret)
+                } else {
+                    isOpenString = true
+                }
+            }
+
+            if (desiredX === null) {
+                if (isOpenString) {
+                    // Explicit open-string note: hide finger and clear slide origin
+                    if (state.visible) {
+                        this.hideFingerCircle(s)
+                    }
+                    state.lastKnownFretX = null
+                }
+                // No active note (gap between notes): leave the finger visible where it is
+                continue
+            }
+
+            if (!state.visible) {
+                const slideFrom = state.lastKnownFretX
+                const shouldSlide = slideFrom !== null && slideFrom !== desiredX
+
+                // Place circle at slide origin (or target if snapping)
+                const startX = shouldSlide ? slideFrom! : desiredX
+                state.currentX = startX
+                state.animStartX = startX
+                state.targetX = desiredX
+                state.animStartElapsed = elapsed
+                state.visible = true
+
+                this.fingerCircles[s] = this.fingersGroup
+                    .append("circle")
+                    .attr("cx", startX)
+                    .attr("cy", STRING_Y[s])
+                    .attr("r", FINGER_RADIUS)
+                    .attr("fill", STRING_COLORS[s])
+                    .attr("fill-opacity", 0.55)
+                    .attr("stroke", "url(#dynamic-finger-stroke)")
+                    .attr("stroke-width", 1.2)
+            } else if (desiredX !== state.targetX) {
+                // Fret changed mid-note — slide from current interpolated position
+                state.animStartX = state.currentX
+                state.targetX = desiredX
+                state.animStartElapsed = elapsed
+            }
+
+            // Interpolate cx toward target
+            const rawProgress =
+                (elapsed - state.animStartElapsed) / SLIDE_DURATION
+            const progress = Math.min(1, Math.max(0, rawProgress))
+            state.currentX =
+                state.animStartX +
+                (state.targetX - state.animStartX) * easeOut(progress)
+
+            this.fingerCircles[s]!.attr("cx", state.currentX)
+
+            // Remember this fret so the next note on this string can slide from here
+            state.lastKnownFretX = desiredX
+        }
+    }
+
+    /**
      * Stop the visualization and clear all indicators.
      */
     stop(): void {
         this.isActive = false
-        this.fingersGroup.selectAll("*").remove()
+        for (let s = 1; s <= 6; s++) {
+            this.hideFingerCircle(s)
+            this.fingerStates[s].lastKnownFretX = null
+        }
         this.strumsGroup.selectAll("*").remove()
         this.stringAnimator.stopAll()
     }
@@ -235,36 +382,8 @@ export class GuitarVisualizer {
         // --- String vibration ---
         this.stringAnimator.updateAll(elapsed, activeNotes as ActiveNote[])
 
-        // --- Fret finger indicators (only for fretted notes, fret > 0) ---
-        // Deduplicate to one note per string (latest note wins), then filter for fretted
-        const frettedNotes = latestNotePerString(activeNotes).filter(
-            (n) => n.fret > 0,
-        )
-
-        const fingers = this.fingersGroup
-            .selectAll<SVGCircleElement, NoteWithKey>("circle")
-            .data(frettedNotes, (d) => String(d.string))
-
-        // Enter: new finger circles
-        fingers
-            .enter()
-            .append("circle")
-            .attr("cx", (d) => getFretFingerX(d.fret)!)
-            .attr("cy", (d) => STRING_Y[d.string])
-            .attr("r", FINGER_RADIUS)
-            .attr("fill", (d) => STRING_COLORS[d.string])
-            .attr("fill-opacity", 0.55)
-            .attr("stroke", "url(#dynamic-finger-stroke)")
-            .attr("stroke-width", 1.2)
-
-        // Update: reposition when a new note replaces an old one on the same string
-        fingers
-            .attr("cx", (d) => getFretFingerX(d.fret)!)
-            .attr("cy", (d) => STRING_Y[d.string])
-            .attr("fill", (d) => STRING_COLORS[d.string])
-
-        // Exit: remove fingers for notes that are no longer active
-        fingers.exit().remove()
+        // --- Fret finger indicators (animated slides between frets) ---
+        this.updateFingerCircles(elapsed, activeNotes)
 
         // --- Strum indicators (for all active notes, including open strings) ---
         // Deduplicate to one note per string (latest note wins), then cap display duration
