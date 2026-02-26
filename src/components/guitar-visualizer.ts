@@ -67,6 +67,9 @@ const MAX_STRUM_DURATION = 0.2
 /** Duration of the fret-to-fret slide animation in seconds */
 const SLIDE_DURATION = 0.06
 
+/** Duration of the finger fade-in / fade-out in seconds */
+const FADE_DURATION = 0.04
+
 // --- Types ---
 
 /** Quadratic ease-out: fast start, decelerates at target */
@@ -93,6 +96,9 @@ interface FingerAnimState {
     /** X position of the last fretted note on this string; retained after note ends so
      *  the next note can slide from here. Reset to null when an open string is played. */
     lastKnownFretX: number | null
+    /** Current opacity animation phase */
+    fadePhase: "in" | "stable" | "out"
+    fadeStartElapsed: number
 }
 
 /**
@@ -156,6 +162,8 @@ export class GuitarVisualizer {
                 animStartX: 0,
                 animStartElapsed: 0,
                 lastKnownFretX: null,
+                fadePhase: "stable",
+                fadeStartElapsed: 0,
             }
             this.fingerCircles[s] = null
         }
@@ -259,14 +267,14 @@ export class GuitarVisualizer {
     }
 
     /**
-     * Per-frame update for fret finger circles with slide animation.
+     * Per-frame update for fret finger circles with slide animation and fade in/out.
      *
-     * - Fingers slide from the previous note's fret to the new note's fret when a
-     *   new note starts on a string that had a prior fretted note.
-     * - Fingers snap on the very first appearance (no prior note on this string).
-     * - Fingers are removed immediately when the active note ends.
-     * - lastKnownFretX is cleared when an open string is played, so the next
-     *   fretted note snaps rather than sliding in from a stale position.
+     * - Fingers fade in quickly on first appearance and slide from the previous fret
+     *   if one is known, otherwise snap.
+     * - Fingers fade out quickly when an explicit open-string note is played, then
+     *   are removed from the DOM once the fade completes.
+     * - During a gap between notes the finger stays visible at its last fret.
+     * - If a fretted note arrives during a fade-out, the fade is reversed to fade-in.
      */
     private updateFingerCircles(
         elapsed: number,
@@ -284,9 +292,8 @@ export class GuitarVisualizer {
         for (let s = 1; s <= 6; s++) {
             const note = latestByString[s]
             const state = this.fingerStates[s]
+            const circle = this.fingerCircles[s]
 
-            // --- Determine desired position ---
-            // null means no finger should be visible
             let desiredX: number | null = null
             let isOpenString = false
             if (note) {
@@ -297,28 +304,51 @@ export class GuitarVisualizer {
                 }
             }
 
-            if (desiredX === null) {
-                if (isOpenString) {
-                    // Explicit open-string note: hide finger and clear slide origin
-                    if (state.visible) {
+            // --- Handle active fade-out ---
+            if (state.fadePhase === "out") {
+                if (desiredX !== null) {
+                    // New fretted note arrived: cancel fade-out, fade back in
+                    state.fadePhase = "in"
+                    state.fadeStartElapsed = elapsed
+                    // Fall through to normal position handling below
+                } else {
+                    // Still fading out
+                    const progress = Math.min(
+                        1,
+                        (elapsed - state.fadeStartElapsed) / FADE_DURATION,
+                    )
+                    circle?.attr("fill-opacity", (1 - easeOut(progress)) * 0.55)
+                    if (progress >= 1) {
                         this.hideFingerCircle(s)
                     }
+                    continue
+                }
+            }
+
+            // --- No fretted note ---
+            if (desiredX === null) {
+                if (isOpenString && state.visible) {
+                    // Start fade-out; actual removal happens once fade completes
+                    state.fadePhase = "out"
+                    state.fadeStartElapsed = elapsed
                     state.lastKnownFretX = null
                 }
-                // No active note (gap between notes): leave the finger visible where it is
+                // Gap between notes: leave finger visible
                 continue
             }
 
+            // --- Create or reuse the circle ---
             if (!state.visible) {
                 const slideFrom = state.lastKnownFretX
                 const shouldSlide = slideFrom !== null && slideFrom !== desiredX
-
-                // Place circle at slide origin (or target if snapping)
                 const startX = shouldSlide ? slideFrom! : desiredX
+
                 state.currentX = startX
                 state.animStartX = startX
                 state.targetX = desiredX
                 state.animStartElapsed = elapsed
+                state.fadePhase = "in"
+                state.fadeStartElapsed = elapsed
                 state.visible = true
 
                 this.fingerCircles[s] = this.fingersGroup
@@ -327,7 +357,7 @@ export class GuitarVisualizer {
                     .attr("cy", STRING_Y[s])
                     .attr("r", FINGER_RADIUS)
                     .attr("fill", STRING_COLORS[s])
-                    .attr("fill-opacity", 0.55)
+                    .attr("fill-opacity", 0)
                     .attr("stroke", "url(#dynamic-finger-stroke)")
                     .attr("stroke-width", 1.2)
             } else if (desiredX !== state.targetX) {
@@ -337,17 +367,32 @@ export class GuitarVisualizer {
                 state.animStartElapsed = elapsed
             }
 
-            // Interpolate cx toward target
-            const rawProgress =
-                (elapsed - state.animStartElapsed) / SLIDE_DURATION
-            const progress = Math.min(1, Math.max(0, rawProgress))
+            // --- Interpolate position ---
+            const slideProgress = Math.min(
+                1,
+                Math.max(
+                    0,
+                    (elapsed - state.animStartElapsed) / SLIDE_DURATION,
+                ),
+            )
             state.currentX =
                 state.animStartX +
-                (state.targetX - state.animStartX) * easeOut(progress)
-
+                (state.targetX - state.animStartX) * easeOut(slideProgress)
             this.fingerCircles[s]!.attr("cx", state.currentX)
 
-            // Remember this fret so the next note on this string can slide from here
+            // --- Apply fade-in opacity ---
+            if (state.fadePhase === "in") {
+                const fadeProgress = Math.min(
+                    1,
+                    (elapsed - state.fadeStartElapsed) / FADE_DURATION,
+                )
+                this.fingerCircles[s]!.attr(
+                    "fill-opacity",
+                    easeOut(fadeProgress) * 0.55,
+                )
+                if (fadeProgress >= 1) state.fadePhase = "stable"
+            }
+
             state.lastKnownFretX = desiredX
         }
     }
