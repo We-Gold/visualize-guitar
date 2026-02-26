@@ -69,9 +69,12 @@ export class FrequencyPlotter {
             .attr("y", innerHeight)
             .attr("height", 0)
             .style("fill", (_d: any, i: any) => {
-                // Gradient from blue (low freq) to red (high freq)
-                const hue = (1 - i / numBars) * 240 // 240 to 0 degrees (blue to red)
-                return `hsl(${hue}, 100%, 50%)`
+                // Red-to-amber scale: dark crimson at low freq, bright orange-red at high freq
+                const t = i / numBars
+                const hue = t * 28 // 0° (red) → 28° (amber-orange)
+                const saturation = 75 + t * 25 // 75% → 100%
+                const lightness = 22 + t * 33 // 22% (deep) → 55% (bright)
+                return `hsl(${hue}, ${saturation}%, ${lightness}%)`
             })
     }
 
