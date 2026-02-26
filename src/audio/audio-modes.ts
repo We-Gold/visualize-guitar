@@ -49,10 +49,12 @@ export interface JSONAudioFile {
     tracks: {
         name: string
         notes: {
-            id: number
+            id?: number
             duration: number
+            durationTicks?: number
             midi: number
             name: string
+            ticks?: number
             time: number
             velocity: number
             string: number
