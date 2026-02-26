@@ -90,7 +90,7 @@ export class GuitarSampler {
         try {
             this.sampler = new Tone.Sampler({
                 urls: buildGuitarSamplerMap(),
-                baseUrl: "/guitar/samples/",
+                baseUrl: `${import.meta.env.BASE_URL}guitar/samples/`,
                 // release: 1,
             }).toDestination()
 
@@ -98,7 +98,7 @@ export class GuitarSampler {
             for (let stringNum = 1; stringNum <= 6; stringNum++) {
                 const stringSampler = new Tone.Sampler({
                     urls: buildGuitarSamplerMap(),
-                    baseUrl: "/guitar/samples/",
+                    baseUrl: `${import.meta.env.BASE_URL}guitar/samples/`,
                 }).toDestination()
                 this.stringSamplers.set(stringNum, stringSampler)
             }

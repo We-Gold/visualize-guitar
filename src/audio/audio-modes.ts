@@ -25,13 +25,13 @@ export const audioModes: AudioMode[] = [
     {
         type: "json",
         name: "Loop E2",
-        jsonPath: "/data/loop-e2.json",
+        jsonPath: `${import.meta.env.BASE_URL}data/loop-e2.json`,
         loop: { intervalSeconds: 1 },
     },
     {
         type: "json",
         name: "The Last of Us (JSON)",
-        jsonPath: "/data/the-last-of-us.json",
+        jsonPath: `${import.meta.env.BASE_URL}data/the-last-of-us.json`,
         playConfig: {
             durationMultiplier: 2.5,
             velocityMultiplier: 0.7,
@@ -40,7 +40,7 @@ export const audioModes: AudioMode[] = [
     {
         type: "json",
         name: "The Last of Us - String 1 (Loop)",
-        jsonPath: "/data/the-last-of-us-string1.json",
+        jsonPath: `${import.meta.env.BASE_URL}data/the-last-of-us-string1.json`,
         loop: { intervalSeconds: 2 },
         playConfig: {
             durationMultiplier: 2.5,
