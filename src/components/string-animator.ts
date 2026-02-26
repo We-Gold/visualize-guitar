@@ -1,7 +1,7 @@
 import * as d3 from "d3"
 
 /** Per-string configuration derived from the SVG */
-interface StringConfig {
+export interface StringConfig {
     groupId: string
     centerY: number
     startX: number // bridge end (left)
@@ -11,7 +11,7 @@ interface StringConfig {
     colors: [string, string, string, string, string]
 }
 
-const STRING_CONFIGS: Record<number, StringConfig> = {
+export const STRING_CONFIGS: Record<number, StringConfig> = {
     1: {
         groupId: "String 1",
         centerY: 244.16,

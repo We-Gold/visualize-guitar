@@ -62,6 +62,7 @@ function buildGuitarSamplerMap(): Record<string, string> {
 
 export class GuitarSampler {
     private sampler?: Tone.Sampler
+    private stringSamplers: Map<number, Tone.Sampler> = new Map()
     private synth?: Tone.Synth
     private isReady = false
 
@@ -93,7 +94,16 @@ export class GuitarSampler {
                 // release: 1,
             }).toDestination()
 
-            // Wait for samples to load
+            // Create per-string samplers (strings 1–6) for individual waveform analysis
+            for (let stringNum = 1; stringNum <= 6; stringNum++) {
+                const stringSampler = new Tone.Sampler({
+                    urls: buildGuitarSamplerMap(),
+                    baseUrl: "/guitar/samples/",
+                }).toDestination()
+                this.stringSamplers.set(stringNum, stringSampler)
+            }
+
+            // Wait for all samples (main + per-string) to load
             await Tone.loaded()
             this.isReady = true
         } catch (error) {
@@ -129,6 +139,47 @@ export class GuitarSampler {
 
     isLoaded(): boolean {
         return this.isReady
+    }
+
+    /**
+     * Returns the Tone.Sampler dedicated to the given string number (1–6).
+     * AudioController uses this to connect per-string waveform analyzers.
+     */
+    getStringSampler(stringNum: number): Tone.Sampler | undefined {
+        return this.stringSamplers.get(stringNum)
+    }
+
+    /**
+     * Play a note routed through the per-string sampler so that
+     * per-string waveform analyzers can capture it individually.
+     */
+    playOnString(
+        stringNum: number,
+        noteName: string,
+        duration: number | string,
+        time: number = Tone.now(),
+        velocity: number = 0.8,
+    ): void {
+        const stringSampler = this.stringSamplers.get(stringNum)
+        try {
+            if (stringSampler) {
+                stringSampler.triggerAttackRelease(
+                    noteName,
+                    duration,
+                    time,
+                    velocity,
+                )
+            } else {
+                // Fallback to shared sampler if per-string sampler not available
+                this.play(noteName, duration, time, velocity)
+            }
+        } catch (error) {
+            console.warn(
+                "Error playing note on string sampler, falling back:",
+                error,
+            )
+            this.play(noteName, duration, time, velocity)
+        }
     }
 }
 

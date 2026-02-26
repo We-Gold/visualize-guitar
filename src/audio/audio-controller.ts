@@ -7,6 +7,8 @@ import { JSONPlayer } from "./json-player"
 export interface AnalyzerState {
     fftValues: Float32Array
     waveformValues: Float32Array
+    /** Per-string waveform data: index 0 = string 1, index 5 = string 6 */
+    stringWaveformValues: Float32Array[]
 }
 
 export class AudioController {
@@ -14,9 +16,14 @@ export class AudioController {
     private isInitialized = false
     private fftAnalyzer!: Tone.Analyser
     private waveformAnalyzer!: Tone.Analyser
+    private stringWaveformAnalyzers: Tone.Analyser[] = []
     private analyzerState: AnalyzerState = {
         fftValues: new Float32Array(0),
         waveformValues: new Float32Array(0),
+        stringWaveformValues: Array.from(
+            { length: 6 },
+            () => new Float32Array(0),
+        ),
     }
     private analyzerListeners: Array<(state: AnalyzerState) => void> = []
 
@@ -64,6 +71,17 @@ export class AudioController {
         this.guitarSampler = new GuitarSampler()
         await this.guitarSampler.load()
 
+        // Create per-string waveform analyzers and connect to each string's sampler
+        for (let stringNum = 1; stringNum <= 6; stringNum++) {
+            const analyzer = new Tone.Analyser("waveform")
+            analyzer.size = 512
+            const stringSampler = this.guitarSampler.getStringSampler(stringNum)
+            if (stringSampler) {
+                stringSampler.connect(analyzer)
+            }
+            this.stringWaveformAnalyzers[stringNum - 1] = analyzer
+        }
+
         // Create the players
         this.midiPlayer = new MidiPlayer(this.guitarSampler)
         this.loopPlayer = new LoopPlayer(this.guitarSampler)
@@ -102,6 +120,12 @@ export class AudioController {
 
         this.analyzerState.fftValues = fftData
         this.analyzerState.waveformValues = waveformData
+
+        // Read per-string waveform data
+        for (let i = 0; i < this.stringWaveformAnalyzers.length; i++) {
+            this.analyzerState.stringWaveformValues[i] =
+                this.stringWaveformAnalyzers[i].getValue() as Float32Array
+        }
 
         // Notify all listeners
         this.analyzerListeners.forEach((callback) => {

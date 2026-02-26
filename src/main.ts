@@ -43,13 +43,14 @@ import { audioModes } from "./audio/audio-modes"
         unsubscribeListener = audioController.onAnalyzerUpdate((state) => {
             plotter.updateBars(state)
             waveformPlotter.updateWaveform(state)
+            waveformPlotter.updateStringWaveforms(state.stringWaveformValues)
         })
 
         // Start animation loop for real-time updates
         stopAnimationLoop() // Clean up any previous loop
         startAnimationLoop()
 
-        const audioMode = audioModes[2]
+        const audioMode = audioModes[1]
 
         if (audioMode.type === "midi") {
             await audioController.midiPlayer.load(

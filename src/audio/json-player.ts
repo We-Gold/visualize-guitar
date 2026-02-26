@@ -60,10 +60,11 @@ export class JSONPlayer {
         this.onPlayCallback?.(this.playStartTime)
 
         try {
-            // Schedule all notes from all tracks
+            // Schedule all notes from all tracks, routed through per-string samplers
             this.jsonData.tracks.forEach((track) => {
                 track.notes.forEach((note) => {
-                    this.sampler.play(
+                    this.sampler.playOnString(
+                        note.string,
                         note.name,
                         note.duration * this.playConfig.durationMultiplier!,
                         now + note.time,

@@ -37,7 +37,7 @@ export class FrequencyPlotter {
             .attr("height", this.height)
             .style("background", "rgba(0, 0, 0, 0.8)")
             .style("border-radius", "4px")
-            .style("border", "1px solid rgba(0, 255, 255, 0.3)")
+            .style("border", "1px solid rgba(255, 255, 255, 0.3)")
 
         // Create scales
         const innerWidth = this.width - this.margin.left - this.margin.right
