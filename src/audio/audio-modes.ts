@@ -37,6 +37,16 @@ export const audioModes: AudioMode[] = [
             velocityMultiplier: 0.7,
         },
     },
+    {
+        type: "json",
+        name: "The Last of Us - String 1 (Loop)",
+        jsonPath: "/data/the-last-of-us-string1.json",
+        loop: { intervalSeconds: 2 },
+        playConfig: {
+            durationMultiplier: 2.5,
+            velocityMultiplier: 0.7,
+        },
+    },
 ]
 
 export interface JSONAudioFile {

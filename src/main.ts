@@ -49,7 +49,7 @@ import { audioModes } from "./audio/audio-modes"
         stopAnimationLoop() // Clean up any previous loop
         startAnimationLoop()
 
-        const audioMode = audioModes[1]
+        const audioMode = audioModes[2]
 
         if (audioMode.type === "midi") {
             await audioController.midiPlayer.load(
