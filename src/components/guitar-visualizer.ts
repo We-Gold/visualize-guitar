@@ -68,7 +68,7 @@ const MAX_STRUM_DURATION = 0.2
 const SLIDE_DURATION = 0.06
 
 /** Duration of the finger fade-in / fade-out in seconds */
-const FADE_DURATION = 0.04
+const FADE_DURATION = 0.15
 
 // --- Types ---
 
