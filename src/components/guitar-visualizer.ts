@@ -143,6 +143,7 @@ export class GuitarVisualizer {
     private notes: NoteWithKey[] = []
     private playStartTime = 0
     private isActive = false
+    private songEndTime = 0
     private fingerStates: Record<number, FingerAnimState> = {}
     private fingerCircles: Record<
         number,
@@ -243,6 +244,12 @@ export class GuitarVisualizer {
 
         // Sort by time for efficient scanning
         this.notes.sort((a, b) => a.time - b.time)
+
+        // Pre-compute the moment the last note ends
+        this.songEndTime =
+            this.notes.length > 0
+                ? Math.max(...this.notes.map((n) => n.time + n.duration))
+                : 0
     }
 
     /**
@@ -432,6 +439,17 @@ export class GuitarVisualizer {
 
         // --- String vibration ---
         this.stringAnimator.updateAll(elapsed, activeNotes as ActiveNote[])
+
+        // --- Fade out all lingering fingers once the song has ended ---
+        if (elapsed >= this.songEndTime) {
+            for (let s = 1; s <= 6; s++) {
+                const state = this.fingerStates[s]
+                if (state.visible && state.fadePhase !== "out") {
+                    state.fadePhase = "out"
+                    state.fadeStartElapsed = elapsed
+                }
+            }
+        }
 
         // --- Fret finger indicators (animated slides between frets) ---
         this.updateFingerCircles(elapsed, activeNotes)
