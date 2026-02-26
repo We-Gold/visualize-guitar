@@ -110,12 +110,43 @@ export class GuitarVisualizer {
         this.svg.select("#Fingers").attr("display", "none")
         this.svg.select("#Strum").attr("display", "none")
 
+        // Create gradient for finger stroke if it doesn't exist
+        this.createFingerGradient()
+
         // Create groups inside #Guitar for dynamic elements
         const guitarGroup = this.svg.select("#Guitar")
         this.strumsGroup = guitarGroup.append("g").attr("id", "dynamic-strums")
         this.fingersGroup = guitarGroup
             .append("g")
             .attr("id", "dynamic-fingers")
+    }
+
+    /**
+     * Create a linear gradient for finger stroke (white to gray).
+     * This gradient is added to the SVG's defs section if it doesn't already exist.
+     */
+    private createFingerGradient(): void {
+        const defs = this.svg.select("defs")
+        const gradientId = "dynamic-finger-stroke"
+
+        // Check if gradient already exists
+        if (defs.select(`#${gradientId}`).empty()) {
+            defs.append("linearGradient")
+                .attr("id", gradientId)
+                .attr("x1", "0%")
+                .attr("y1", "0%")
+                .attr("x2", "0%")
+                .attr("y2", "100%")
+                .selectAll("stop")
+                .data([
+                    { offset: "0%", color: "white" },
+                    { offset: "100%", color: "#999999" },
+                ])
+                .enter()
+                .append("stop")
+                .attr("offset", (d) => d.offset)
+                .attr("stop-color", (d) => d.color)
+        }
     }
 
     /**
@@ -189,8 +220,8 @@ export class GuitarVisualizer {
             .attr("r", FINGER_RADIUS)
             .attr("fill", (d) => STRING_COLORS[d.string])
             .attr("fill-opacity", 0.55)
-            .attr("stroke", "rgba(255,255,255,0.3)")
-            .attr("stroke-width", 0.4)
+            .attr("stroke", "url(#dynamic-finger-stroke)")
+            .attr("stroke-width", 1.2)
 
         // Update: reposition if needed (notes don't move, but ensures correctness)
         fingers
