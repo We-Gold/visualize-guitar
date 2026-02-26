@@ -27,7 +27,7 @@ export class WaveformPlotter {
 
         // Position container absolutely below frequency plot
         this.container.style.position = "absolute"
-        this.container.style.top = "230px"
+        this.container.style.bottom = "20px"
         this.container.style.right = "20px"
         this.container.style.zIndex = "10"
 

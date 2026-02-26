@@ -20,8 +20,7 @@ const STRING_CONFIGS: Record<number, StringConfig> = {
         startX: 234.55,
         endX: 1207.16,
         rectHeight: 4.703,
-        // High E — thin plain steel, bright silver
-        colors: ["#FFFFFF", "#E8E2DC", "#C0B8B0", "#807870", "#3A3030"],
+        colors: ["#FFFFFF", "#C0C0C0", "#626262", "#383838", "#1A1A1A"],
     },
     2: {
         groupId: "String 2",
@@ -29,7 +28,6 @@ const STRING_CONFIGS: Record<number, StringConfig> = {
         startX: 234.54,
         endX: 1207.6,
         rectHeight: 4.788,
-        // B — plain steel, warm silver
         colors: ["#F8E8E0", "#D8A8A0", "#B06058", "#783830", "#381818"],
     },
     3: {
@@ -38,7 +36,6 @@ const STRING_CONFIGS: Record<number, StringConfig> = {
         startX: 234.54,
         endX: 1207.6,
         rectHeight: 4.871,
-        // G — wound bronze
         colors: ["#F8E0C8", "#D8B088", "#A87048", "#704828", "#382010"],
     },
     4: {
@@ -47,7 +44,6 @@ const STRING_CONFIGS: Record<number, StringConfig> = {
         startX: 234.54,
         endX: 1207.6,
         rectHeight: 4.703,
-        // D — wound, bright orange/bronze
         colors: ["#FFE8B0", "#FFC868", "#E89018", "#A06008", "#584000"],
     },
     5: {
@@ -56,7 +52,6 @@ const STRING_CONFIGS: Record<number, StringConfig> = {
         startX: 234.46,
         endX: 1207.6,
         rectHeight: 4.703,
-        // A — wound, golden
         colors: ["#FFF0D8", "#F0D0A0", "#D8A860", "#987840", "#585030"],
     },
     6: {
@@ -65,7 +60,6 @@ const STRING_CONFIGS: Record<number, StringConfig> = {
         startX: 234.62,
         endX: 1207.23,
         rectHeight: 4.703,
-        // Low E — thick wound, cream/silver
         colors: ["#FFFFFF", "#F0ECE4", "#D8D4C8", "#A09C90", "#606058"],
     },
 }
