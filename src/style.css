@@ -52,7 +52,6 @@ body {
 }
 
 #waveform-plot svg {
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2));
 }
 
 #selector-container {
