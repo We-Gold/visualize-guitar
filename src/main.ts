@@ -15,7 +15,7 @@ import { audioModes } from "./audio/audio-modes"
 
     // Create waveform plotter
     const waveformPlotter = new WaveformPlotter("#waveform-plot")
-    waveformPlotter.setMode("per-string")
+    // waveformPlotter.setMode("per-string")
 
     let unsubscribeListener: (() => void) | null = null
 
