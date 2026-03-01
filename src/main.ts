@@ -11,7 +11,7 @@ import { audioModes } from "./audio/audio-modes"
     await audioController.init()
 
     // Create frequency plotter
-    const plotter = new FrequencyPlotter("#frequency-plot", 300, 180)
+    const plotter = new FrequencyPlotter("#frequency-plot")
 
     // Create waveform plotter
     const waveformPlotter = new WaveformPlotter("#waveform-plot", 400, 150)

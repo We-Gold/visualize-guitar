@@ -9,6 +9,8 @@ export interface AnalyzerState {
     waveformValues: Float32Array
     /** Per-string waveform data: index 0 = string 1, index 5 = string 6 */
     stringWaveformValues: Float32Array[]
+    /** Per-string FFT data: index 0 = string 1, index 5 = string 6 */
+    stringFftValues: Float32Array[]
 }
 
 export class AudioController {
@@ -17,6 +19,7 @@ export class AudioController {
     private fftAnalyzer!: Tone.Analyser
     private waveformAnalyzer!: Tone.Analyser
     private stringWaveformAnalyzers: Tone.Analyser[] = []
+    private stringFftAnalyzers: Tone.Analyser[] = []
     private analyzerState: AnalyzerState = {
         fftValues: new Float32Array(0),
         waveformValues: new Float32Array(0),
@@ -24,6 +27,7 @@ export class AudioController {
             { length: 6 },
             () => new Float32Array(0),
         ),
+        stringFftValues: Array.from({ length: 6 }, () => new Float32Array(0)),
     }
     private analyzerListeners: Array<(state: AnalyzerState) => void> = []
 
@@ -71,15 +75,19 @@ export class AudioController {
         this.guitarSampler = new GuitarSampler()
         await this.guitarSampler.load()
 
-        // Create per-string waveform analyzers and connect to each string's sampler
+        // Create per-string waveform and FFT analyzers, connect to each string's sampler
         for (let stringNum = 1; stringNum <= 6; stringNum++) {
-            const analyzer = new Tone.Analyser("waveform")
-            analyzer.size = 512
+            const waveformAnalyzer = new Tone.Analyser("waveform")
+            waveformAnalyzer.size = 512
+            const fftAnalyzer = new Tone.Analyser("fft")
+            fftAnalyzer.size = 1024
             const stringSampler = this.guitarSampler.getStringSampler(stringNum)
             if (stringSampler) {
-                stringSampler.connect(analyzer)
+                stringSampler.connect(waveformAnalyzer)
+                stringSampler.connect(fftAnalyzer)
             }
-            this.stringWaveformAnalyzers[stringNum - 1] = analyzer
+            this.stringWaveformAnalyzers[stringNum - 1] = waveformAnalyzer
+            this.stringFftAnalyzers[stringNum - 1] = fftAnalyzer
         }
 
         // Create the players
@@ -125,6 +133,13 @@ export class AudioController {
         for (let i = 0; i < this.stringWaveformAnalyzers.length; i++) {
             this.analyzerState.stringWaveformValues[i] =
                 this.stringWaveformAnalyzers[i].getValue() as Float32Array
+        }
+
+        // Read per-string FFT data
+        for (let i = 0; i < this.stringFftAnalyzers.length; i++) {
+            this.analyzerState.stringFftValues[i] = this.stringFftAnalyzers[
+                i
+            ].getValue() as Float32Array
         }
 
         // Notify all listeners
