@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "title": "E Minor Pentatonic (Low E)",
+    "tempo": 100,
+    "timeSignature": [4, 4],
+    "tuning": [40, 45, 50, 55, 59, 64]
+  },
+  "tracks": [
+    {
+      "name": "Pentatonic",
+      "notes": [
+        { "time": 0.0, "duration": 0.5, "midi": 40, "name": "E2", "velocity": 0.8, "string": 6, "fret": 0  },
+        { "time": 0.6, "duration": 0.5, "midi": 43, "name": "G2", "velocity": 0.8, "string": 6, "fret": 3  },
+        { "time": 1.2, "duration": 0.5, "midi": 45, "name": "A2", "velocity": 0.8, "string": 6, "fret": 5  },
+        { "time": 1.8, "duration": 0.5, "midi": 47, "name": "B2", "velocity": 0.8, "string": 6, "fret": 7  },
+        { "time": 2.4, "duration": 0.5, "midi": 50, "name": "D3", "velocity": 0.8, "string": 6, "fret": 10 },
+        { "time": 3.0, "duration": 0.5, "midi": 52, "name": "E3", "velocity": 0.8, "string": 6, "fret": 12 },
+        { "time": 3.6, "duration": 0.5, "midi": 50, "name": "D3", "velocity": 0.8, "string": 6, "fret": 10 },
+        { "time": 4.2, "duration": 0.5, "midi": 47, "name": "B2", "velocity": 0.8, "string": 6, "fret": 7  },
+        { "time": 4.8, "duration": 0.5, "midi": 45, "name": "A2", "velocity": 0.8, "string": 6, "fret": 5  },
+        { "time": 5.4, "duration": 0.5, "midi": 43, "name": "G2", "velocity": 0.8, "string": 6, "fret": 3  },
+        { "time": 6.0, "duration": 0.5, "midi": 40, "name": "E2", "velocity": 0.8, "string": 6, "fret": 0  }
+      ]
+    }
+  ]
+}

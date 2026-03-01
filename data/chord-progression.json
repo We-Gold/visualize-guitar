@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "title": "Chord Progression: Em Am C G",
+    "tempo": 100,
+    "timeSignature": [4, 4],
+    "tuning": [40, 45, 50, 55, 59, 64]
+  },
+  "tracks": [
+    {
+      "name": "Chords",
+      "notes": [
+        { "time": 0.0,  "duration": 2.2, "midi": 40, "name": "E2", "velocity": 0.8, "string": 6, "fret": 0 },
+        { "time": 0.15, "duration": 2.2, "midi": 47, "name": "B2", "velocity": 0.8, "string": 5, "fret": 2 },
+        { "time": 0.30, "duration": 2.2, "midi": 52, "name": "E3", "velocity": 0.8, "string": 4, "fret": 2 },
+        { "time": 0.45, "duration": 2.2, "midi": 55, "name": "G3", "velocity": 0.8, "string": 3, "fret": 0 },
+        { "time": 0.60, "duration": 2.2, "midi": 59, "name": "B3", "velocity": 0.8, "string": 2, "fret": 0 },
+        { "time": 0.75, "duration": 2.2, "midi": 64, "name": "E4", "velocity": 0.8, "string": 1, "fret": 0 },
+
+        { "time": 2.5,  "duration": 2.2, "midi": 45, "name": "A2", "velocity": 0.8, "string": 5, "fret": 0 },
+        { "time": 2.65, "duration": 2.2, "midi": 52, "name": "E3", "velocity": 0.8, "string": 4, "fret": 2 },
+        { "time": 2.80, "duration": 2.2, "midi": 57, "name": "A3", "velocity": 0.8, "string": 3, "fret": 2 },
+        { "time": 2.95, "duration": 2.2, "midi": 60, "name": "C4", "velocity": 0.8, "string": 2, "fret": 1 },
+        { "time": 3.10, "duration": 2.2, "midi": 64, "name": "E4", "velocity": 0.8, "string": 1, "fret": 0 },
+
+        { "time": 5.0,  "duration": 2.2, "midi": 48, "name": "C3", "velocity": 0.8, "string": 5, "fret": 3 },
+        { "time": 5.15, "duration": 2.2, "midi": 52, "name": "E3", "velocity": 0.8, "string": 4, "fret": 2 },
+        { "time": 5.30, "duration": 2.2, "midi": 55, "name": "G3", "velocity": 0.8, "string": 3, "fret": 0 },
+        { "time": 5.45, "duration": 2.2, "midi": 60, "name": "C4", "velocity": 0.8, "string": 2, "fret": 1 },
+        { "time": 5.60, "duration": 2.2, "midi": 64, "name": "E4", "velocity": 0.8, "string": 1, "fret": 0 },
+
+        { "time": 7.5,  "duration": 2.2, "midi": 43, "name": "G2", "velocity": 0.8, "string": 6, "fret": 3 },
+        { "time": 7.65, "duration": 2.2, "midi": 47, "name": "B2", "velocity": 0.8, "string": 5, "fret": 2 },
+        { "time": 7.80, "duration": 2.2, "midi": 50, "name": "D3", "velocity": 0.8, "string": 4, "fret": 0 },
+        { "time": 7.95, "duration": 2.2, "midi": 55, "name": "G3", "velocity": 0.8, "string": 3, "fret": 0 },
+        { "time": 8.10, "duration": 2.2, "midi": 59, "name": "B3", "velocity": 0.8, "string": 2, "fret": 0 },
+        { "time": 8.25, "duration": 2.2, "midi": 67, "name": "G4", "velocity": 0.8, "string": 1, "fret": 3 }
+      ]
+    }
+  ]
+}

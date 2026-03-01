@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "title": "E Minor Chord",
+    "tempo": 100,
+    "timeSignature": [4, 4],
+    "tuning": [40, 45, 50, 55, 59, 64]
+  },
+  "tracks": [
+    {
+      "name": "Em Chord",
+      "notes": [
+        { "time": 0.0,  "duration": 2.0, "midi": 40, "name": "E2", "velocity": 0.8, "string": 6, "fret": 0 },
+        { "time": 0.3,  "duration": 2.0, "midi": 47, "name": "B2", "velocity": 0.8, "string": 5, "fret": 2 },
+        { "time": 0.6,  "duration": 2.0, "midi": 52, "name": "E3", "velocity": 0.8, "string": 4, "fret": 2 },
+        { "time": 0.9,  "duration": 2.0, "midi": 55, "name": "G3", "velocity": 0.8, "string": 3, "fret": 0 },
+        { "time": 1.2,  "duration": 2.0, "midi": 59, "name": "B3", "velocity": 0.8, "string": 2, "fret": 0 },
+        { "time": 1.5,  "duration": 2.0, "midi": 64, "name": "E4", "velocity": 0.8, "string": 1, "fret": 0 },
+        { "time": 3.5,  "duration": 2.0, "midi": 40, "name": "E2", "velocity": 0.8, "string": 6, "fret": 0 },
+        { "time": 3.52, "duration": 2.0, "midi": 47, "name": "B2", "velocity": 0.8, "string": 5, "fret": 2 },
+        { "time": 3.54, "duration": 2.0, "midi": 52, "name": "E3", "velocity": 0.8, "string": 4, "fret": 2 },
+        { "time": 3.56, "duration": 2.0, "midi": 55, "name": "G3", "velocity": 0.8, "string": 3, "fret": 0 },
+        { "time": 3.58, "duration": 2.0, "midi": 59, "name": "B3", "velocity": 0.8, "string": 2, "fret": 0 },
+        { "time": 3.60, "duration": 2.0, "midi": 64, "name": "E4", "velocity": 0.8, "string": 1, "fret": 0 }
+      ]
+    }
+  ]
+}

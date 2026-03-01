@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "title": "All Open Strings",
+    "tempo": 60,
+    "timeSignature": [4, 4],
+    "tuning": [40, 45, 50, 55, 59, 64]
+  },
+  "tracks": [
+    {
+      "name": "Open Strings",
+      "notes": [
+        { "time": 0.0,  "duration": 2.0, "midi": 40, "name": "E2", "velocity": 0.8, "string": 6, "fret": 0 },
+        { "time": 2.5,  "duration": 2.0, "midi": 45, "name": "A2", "velocity": 0.8, "string": 5, "fret": 0 },
+        { "time": 5.0,  "duration": 2.0, "midi": 50, "name": "D3", "velocity": 0.8, "string": 4, "fret": 0 },
+        { "time": 7.5,  "duration": 2.0, "midi": 55, "name": "G3", "velocity": 0.8, "string": 3, "fret": 0 },
+        { "time": 10.0, "duration": 2.0, "midi": 59, "name": "B3", "velocity": 0.8, "string": 2, "fret": 0 },
+        { "time": 12.5, "duration": 2.0, "midi": 64, "name": "E4", "velocity": 0.8, "string": 1, "fret": 0 },
+        { "time": 15.0, "duration": 2.0, "midi": 59, "name": "B3", "velocity": 0.8, "string": 2, "fret": 0 },
+        { "time": 17.5, "duration": 2.0, "midi": 55, "name": "G3", "velocity": 0.8, "string": 3, "fret": 0 },
+        { "time": 20.0, "duration": 2.0, "midi": 50, "name": "D3", "velocity": 0.8, "string": 4, "fret": 0 },
+        { "time": 22.5, "duration": 2.0, "midi": 45, "name": "A2", "velocity": 0.8, "string": 5, "fret": 0 },
+        { "time": 25.0, "duration": 2.0, "midi": 40, "name": "E2", "velocity": 0.8, "string": 6, "fret": 0 }
+      ]
+    }
+  ]
+}
