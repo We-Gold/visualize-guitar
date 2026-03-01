@@ -349,6 +349,24 @@ export class FrequencyPlotter {
         }
 
         ctx.restore()
+
+        // ── Axis titles ───────────────────────────────────────────────────────
+        ctx.fillStyle = "white"
+        ctx.font = "12px Inconsolata, monospace"
+
+        // Bottom: "Frequency" centered below the chart area
+        ctx.textAlign = "center"
+        ctx.textBaseline = "bottom"
+        ctx.fillText("Frequency", margin.left + innerWidth / 2, height - 5)
+
+        // Right: "Amplitude (dB)" rotated, aligned to the right edge
+        ctx.save()
+        ctx.translate(width - 8, margin.top + innerHeight / 2)
+        ctx.rotate(Math.PI / 2)
+        ctx.textAlign = "center"
+        ctx.textBaseline = "top"
+        ctx.fillText("Amplitude (dB)", 0, 0)
+        ctx.restore()
     }
 
     // ── Icon construction ──────────────────────────────────────────────────
