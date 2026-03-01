@@ -153,6 +153,21 @@ export class GuitarSampler {
      * Play a note routed through the per-string sampler so that
      * per-string waveform analyzers can capture it individually.
      */
+    releaseAll(): void {
+        try {
+            this.sampler?.releaseAll()
+        } catch (_) {
+            // ignore if sampler not ready
+        }
+        this.stringSamplers.forEach((s) => {
+            try {
+                s.releaseAll()
+            } catch (_) {
+                // ignore
+            }
+        })
+    }
+
     playOnString(
         stringNum: number,
         noteName: string,

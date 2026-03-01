@@ -1,6 +1,7 @@
 export interface MidiAudioMode {
     type: "midi"
     name: string
+    description?: string
     midiPath: string
     playConfig?: {
         durationMultiplier?: number
@@ -11,6 +12,7 @@ export interface MidiAudioMode {
 export interface JSONAudioMode {
     type: "json"
     name: string
+    description?: string
     jsonPath: string
     playConfig?: {
         durationMultiplier?: number
@@ -24,14 +26,16 @@ export type AudioMode = MidiAudioMode | JSONAudioMode
 export const audioModes: AudioMode[] = [
     {
         type: "json",
-        name: "Loop E2",
+        name: "ONE STRING",
+        description: "Loop E2",
         jsonPath: `${import.meta.env.BASE_URL}data/loop-e2.json`,
         loop: { intervalSeconds: 1 },
     },
     {
         type: "json",
-        name: "The Last of Us (JSON)",
-        jsonPath: `${import.meta.env.BASE_URL}data/the-last-of-us.json`,
+        name: "THE LAST OF US (BASIC)",
+        jsonPath: `${import.meta.env.BASE_URL}data/the-last-of-us-string1.json`,
+        loop: { intervalSeconds: 2 },
         playConfig: {
             durationMultiplier: 2.5,
             velocityMultiplier: 0.7,
@@ -39,9 +43,8 @@ export const audioModes: AudioMode[] = [
     },
     {
         type: "json",
-        name: "The Last of Us - String 1 (Loop)",
-        jsonPath: `${import.meta.env.BASE_URL}data/the-last-of-us-string1.json`,
-        loop: { intervalSeconds: 2 },
+        name: "THE LAST OF US (FULL)",
+        jsonPath: `${import.meta.env.BASE_URL}data/the-last-of-us.json`,
         playConfig: {
             durationMultiplier: 2.5,
             velocityMultiplier: 0.7,

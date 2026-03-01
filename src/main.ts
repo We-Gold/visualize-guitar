@@ -1,6 +1,7 @@
 import "./style.css"
 import * as Tone from "tone"
 import { Guitar } from "./components/guitar"
+import { Selector } from "./components/selector"
 import { FrequencyPlotter } from "./components/frequency-plotter"
 import { WaveformPlotter } from "./components/waveform-plotter"
 import { AudioController } from "./audio/audio-controller"
@@ -15,42 +16,23 @@ import { audioModes } from "./audio/audio-modes"
     // Create waveform plotter
     const waveformPlotter = new WaveformPlotter("#waveform-plot", 400, 150)
 
-    let animationFrameId: number | null = null
     let unsubscribeListener: (() => void) | null = null
 
     const startAnimationLoop = () => {
         const animate = () => {
             audioController.updateAnalyzerState()
             guitar.updateVisuals(Tone.now())
-            animationFrameId = requestAnimationFrame(animate)
+            requestAnimationFrame(animate)
         }
         animate()
     }
 
-    const stopAnimationLoop = () => {
-        if (animationFrameId !== null) {
-            cancelAnimationFrame(animationFrameId)
-            animationFrameId = null
-        }
-    }
+    const playAudioMode = async (index: number) => {
+        // Stop any currently playing audio and clear visuals
+        audioController.jsonPlayer.stop()
+        guitar.stopVisualization()
 
-    const onclick = async () => {
-        // Trigger on user interaction to comply with browser autoplay policies
-        await audioController.resumeAudioContext()
-
-        // Register listener for plotter updates
-        if (unsubscribeListener) unsubscribeListener()
-        unsubscribeListener = audioController.onAnalyzerUpdate((state) => {
-            plotter.updateBars(state)
-            waveformPlotter.updateWaveform(state)
-            waveformPlotter.updateStringWaveforms(state.stringWaveformValues)
-        })
-
-        // Start animation loop for real-time updates
-        stopAnimationLoop() // Clean up any previous loop
-        startAnimationLoop()
-
-        const audioMode = audioModes[1]
+        const audioMode = audioModes[index]
 
         if (audioMode.type === "midi") {
             await audioController.midiPlayer.load(
@@ -80,7 +62,36 @@ import { audioModes } from "./audio/audio-modes"
         }
     }
 
-    const guitar = new Guitar(document.getElementById("app")!, onclick)
+    const onStart = async () => {
+        // Trigger on user interaction to comply with browser autoplay policies
+        await audioController.resumeAudioContext()
+
+        // Register listener for plotter updates (once)
+        if (unsubscribeListener) unsubscribeListener()
+        unsubscribeListener = audioController.onAnalyzerUpdate((state) => {
+            plotter.updateBars(state)
+            waveformPlotter.updateWaveform(state)
+            waveformPlotter.updateStringWaveforms(state.stringWaveformValues)
+        })
+
+        // Start animation loop for real-time updates
+        startAnimationLoop()
+
+        await playAudioMode(0)
+    }
+
+    const onModeChange = async (index: number) => {
+        await playAudioMode(index)
+    }
+
+    // Create and mount the selector at the top of the app
+    const selectorContainer = document.createElement("div")
+    selectorContainer.id = "selector-container"
+    document.getElementById("app")!.appendChild(selectorContainer)
+    const selector = new Selector(selectorContainer)
+    selector.addSelector(audioModes, onStart, onModeChange)
+
+    const guitar = new Guitar(document.getElementById("app")!)
     guitar.addGuitar()
 })()
 

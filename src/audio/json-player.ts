@@ -55,21 +55,31 @@ export class JSONPlayer {
 
         this.isPlaying = true
         this.shouldLoop = !!this.loopConfig
-        const now = Tone.now()
-        this.playStartTime = now
-        this.onPlayCallback?.(this.playStartTime)
+
+        const transport = Tone.getTransport()
+        transport.stop()
+        transport.cancel()
+        // Reset position to start
+        transport.seconds = 0
+
+        // Small lookahead gives the scheduler time to process events
+        const startTime = Tone.now() + 0.05
+        this.playStartTime = startTime
+        this.onPlayCallback?.(startTime)
 
         try {
-            // Schedule all notes from all tracks, routed through per-string samplers
+            // Schedule all notes relative to transport position 0
             this.jsonData.tracks.forEach((track) => {
                 track.notes.forEach((note) => {
-                    this.sampler.playOnString(
-                        note.string,
-                        note.name,
-                        note.duration * this.playConfig.durationMultiplier!,
-                        now + note.time,
-                        note.velocity * this.playConfig.velocityMultiplier!,
-                    )
+                    transport.schedule((time) => {
+                        this.sampler.playOnString(
+                            note.string,
+                            note.name,
+                            note.duration * this.playConfig.durationMultiplier!,
+                            time,
+                            note.velocity * this.playConfig.velocityMultiplier!,
+                        )
+                    }, note.time)
                 })
             })
 
@@ -79,6 +89,8 @@ export class JSONPlayer {
                     track.notes.map((note) => note.time + note.duration),
                 ),
             )
+
+            transport.start(startTime)
 
             this.playTimeoutId = window.setTimeout(() => {
                 this.isPlaying = false
@@ -110,6 +122,10 @@ export class JSONPlayer {
             window.clearTimeout(this.playTimeoutId)
             this.playTimeoutId = undefined
         }
+        const transport = Tone.getTransport()
+        transport.stop()
+        transport.cancel()
+        this.sampler.releaseAll()
     }
 
     setLooping(enabled: boolean): void {

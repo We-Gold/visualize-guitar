@@ -62,5 +62,14 @@ export class Guitar {
             this.visualizer.updateFingersAndStrum(currentTime)
         }
     }
+
+    /**
+     * Stop the visualization and clear all indicators.
+     */
+    stopVisualization(): void {
+        if (this.visualizer) {
+            this.visualizer.stop()
+        }
+    }
 }
 
