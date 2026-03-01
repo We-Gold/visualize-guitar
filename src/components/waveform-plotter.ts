@@ -14,6 +14,18 @@ const WAVEFORM_CONFIG = {
 
 const STRING_LABELS = ["e", "B", "G", "D", "A", "E"]
 
+// ── SVG helpers ──────────────────────────────────────────────────────────────
+const SVG_NS = "http://www.w3.org/2000/svg"
+
+function makeSvgEl<K extends keyof SVGElementTagNameMap>(
+    tag: K,
+    attrs: Record<string, string | number>,
+): SVGElementTagNameMap[K] {
+    const el = document.createElementNS(SVG_NS, tag)
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v))
+    return el
+}
+
 export type WaveformMode = "composite" | "per-string"
 
 export class WaveformPlotter {
@@ -28,9 +40,11 @@ export class WaveformPlotter {
     private margin = WAVEFORM_CONFIG.margin
     private dpr: number
     private fadeGradient: CanvasGradient
-    private mode: WaveformMode = "composite"
+    private mode: WaveformMode = "per-string"
     private lastComposite: Float32Array | null = null
     private lastStringData: Float32Array[] = []
+    private iconExpand!: SVGGElement
+    private iconCollapse!: SVGGElement
 
     constructor(
         containerSelector: string,
@@ -52,12 +66,23 @@ export class WaveformPlotter {
         }
         this.container = container as HTMLElement
 
-        // Position container
-        this.container.style.position = "absolute"
-        this.container.style.bottom = "20px"
-        this.container.style.right = "20px"
-        this.container.style.zIndex = "10"
+        // Container becomes an absolute-positioned flex row (icon left, canvas right)
+        Object.assign(this.container.style, {
+            position: "absolute",
+            bottom: "20px",
+            right: "20px",
+            zIndex: "10",
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: "8px",
+        })
 
+        // ── Toggle icon ──────────────────────────────────────────────────────
+        const iconSvg = this.buildToggleIcon()
+        this.container.appendChild(iconSvg)
+
+        // ── Canvas ───────────────────────────────────────────────────────────
         // Create canvas — scale by devicePixelRatio for sharp rendering on HiDPI
         this.dpr = window.devicePixelRatio || 1
         this.canvas = document.createElement("canvas")
@@ -83,6 +108,107 @@ export class WaveformPlotter {
         )
         this.fadeGradient.addColorStop(0, "rgba(0,0,0,0)") // transparent = no erase
         this.fadeGradient.addColorStop(1, "rgba(0,0,0,1)") // opaque = full erase
+
+        // Initial draw so lines/labels are visible before any audio data arrives
+        this.redraw()
+    }
+
+    // ── Icon construction ────────────────────────────────────────────────────
+
+    /**
+     * Build the toggle SVG with two swappable groups:
+     *   iconExpand   – shown in composite mode  (click → per-string)
+     *   iconCollapse – shown in per-string mode (click → composite)
+     */
+    private buildToggleIcon(): SVGSVGElement {
+        const W = 18
+        const H = 60
+        const cx = W / 2
+        const strokeAttrs = {
+            stroke: "rgba(255,255,255,0.55)",
+            "stroke-width": "1.5",
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+            fill: "none",
+        }
+
+        const svg = makeSvgEl("svg", {
+            width: W,
+            height: H,
+            viewBox: `0 0 ${W} ${H}`,
+        })
+        svg.style.cursor = "pointer"
+        svg.style.flexShrink = "0"
+
+        // Hover: bump opacity
+        svg.addEventListener("mouseenter", () => {
+            svg.style.opacity = "1"
+            for (const g of [this.iconExpand, this.iconCollapse])
+                g.setAttribute("stroke", "rgba(255,255,255,0.9)")
+        })
+        svg.addEventListener("mouseleave", () => {
+            for (const g of [this.iconExpand, this.iconCollapse])
+                g.setAttribute("stroke", "rgba(255,255,255,0.55)")
+        })
+        svg.addEventListener("click", () => {
+            this.setMode(this.mode === "composite" ? "per-string" : "composite")
+        })
+
+        // ── Shared geometry ──────────────────────────────────────────────────
+        const midY = H / 2 // vertical centre
+        const chevH = 5 // half-height of chevron arms
+        const chevW = 5 // horizontal half-width of chevron
+
+        const makeLine = (parent: SVGGElement, y: number) => {
+            parent.appendChild(
+                makeSvgEl("line", { x1: 2, y1: y, x2: W - 2, y2: y }),
+            )
+        }
+
+        // ── Expand group (composite → per-string) ────────────────────────────
+        // 1 bar in the centre; outward chevrons (∧ above, ∨ below)
+        const expTopY = 12
+        const expBotY = H - 12
+        this.iconExpand = makeSvgEl("g", strokeAttrs) as SVGGElement
+        this.iconExpand.style.display = "none"
+        makeLine(this.iconExpand, midY)
+        // Top outward chevron (∧)
+        this.iconExpand.appendChild(
+            makeSvgEl("polyline", {
+                points: `${cx - chevW},${expTopY + chevH} ${cx},${expTopY - chevH} ${cx + chevW},${expTopY + chevH}`,
+            }),
+        )
+        // Bottom outward chevron (∨)
+        this.iconExpand.appendChild(
+            makeSvgEl("polyline", {
+                points: `${cx - chevW},${expBotY - chevH} ${cx},${expBotY + chevH} ${cx + chevW},${expBotY - chevH}`,
+            }),
+        )
+        svg.appendChild(this.iconExpand)
+
+        // ── Collapse group (per-string → composite) ──────────────────────────
+        // 3 bars clustered in the centre; inward chevrons (∨ above, ∧ below)
+        const colTopY = 16
+        const colBotY = H - 16
+        this.iconCollapse = makeSvgEl("g", strokeAttrs) as SVGGElement
+        makeLine(this.iconCollapse, midY - 4)
+        makeLine(this.iconCollapse, midY)
+        makeLine(this.iconCollapse, midY + 4)
+        // Top inward chevron (∨, pointing toward centre)
+        this.iconCollapse.appendChild(
+            makeSvgEl("polyline", {
+                points: `${cx - chevW},${colTopY - chevH} ${cx},${colTopY + chevH} ${cx + chevW},${colTopY - chevH}`,
+            }),
+        )
+        // Bottom inward chevron (∧, pointing toward centre)
+        this.iconCollapse.appendChild(
+            makeSvgEl("polyline", {
+                points: `${cx - chevW},${colBotY + chevH} ${cx},${colBotY - chevH} ${cx + chevW},${colBotY + chevH}`,
+            }),
+        )
+        svg.appendChild(this.iconCollapse)
+
+        return svg
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
@@ -136,6 +262,30 @@ export class WaveformPlotter {
         ctx.translate(margin.left, margin.top)
 
         if (this.mode === "composite") {
+            // Ghost per-string signals behind the composite line
+            ctx.lineWidth = 1
+            ctx.lineJoin = "round"
+            ctx.lineCap = "round"
+            ctx.globalAlpha = 0.3
+            for (let i = 0; i < 6; i++) {
+                const data = this.lastStringData[i]
+                ctx.strokeStyle = STRING_WAVEFORM_COLORS[i]
+                if (data && data.length > 0) {
+                    this.drawWaveformLine(
+                        data,
+                        innerHeight / 2,
+                        innerHeight / 2,
+                    )
+                } else {
+                    ctx.beginPath()
+                    ctx.moveTo(0, innerHeight / 2)
+                    ctx.lineTo(this.innerWidth, innerHeight / 2)
+                    ctx.stroke()
+                }
+            }
+            ctx.globalAlpha = 1
+
+            // Composite signal on top
             if (this.lastComposite && this.lastComposite.length > 0) {
                 ctx.strokeStyle = "rgba(255, 255, 255, 0.93)"
                 ctx.lineWidth = 2
@@ -155,7 +305,7 @@ export class WaveformPlotter {
                 ctx.save()
                 ctx.translate(0, i * laneHeight)
 
-                // String label (drawn outside the fade region, in left margin)
+                // String label (drawn in left margin, outside the fade region)
                 if (WAVEFORM_CONFIG.showStringLabels) {
                     ctx.fillStyle = STRING_WAVEFORM_COLORS[i]
                     ctx.font = "14px Inconsolata, monospace"
@@ -177,7 +327,7 @@ export class WaveformPlotter {
                 if (data && data.length > 0) {
                     this.drawWaveformLine(data, laneHeight / 2, laneHeight / 2)
                 } else {
-                    // No data yet — draw a flat midline so lanes are visible before playback starts
+                    // No data yet — flat midline so lanes are visible before playback
                     ctx.beginPath()
                     ctx.moveTo(0, laneHeight / 2)
                     ctx.lineTo(this.innerWidth, laneHeight / 2)
@@ -185,7 +335,6 @@ export class WaveformPlotter {
                 }
 
                 ctx.globalAlpha = 1
-
                 ctx.restore()
             }
         }
@@ -204,6 +353,9 @@ export class WaveformPlotter {
      */
     public setMode(mode: WaveformMode): void {
         this.mode = mode
+        const isPerString = mode === "per-string"
+        this.iconExpand.style.display = isPerString ? "none" : ""
+        this.iconCollapse.style.display = isPerString ? "" : "none"
         this.redraw()
     }
 
@@ -221,7 +373,7 @@ export class WaveformPlotter {
      */
     public updateStringWaveforms(stringWaveformValues: Float32Array[]): void {
         this.lastStringData = stringWaveformValues
-        if (this.mode === "per-string") this.redraw()
+        this.redraw()
     }
 }
 
