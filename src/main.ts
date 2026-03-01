@@ -15,7 +15,6 @@ import { audioModes } from "./audio/audio-modes"
 
     // Create waveform plotter
     const waveformPlotter = new WaveformPlotter("#waveform-plot")
-    // waveformPlotter.setMode("per-string")
 
     let unsubscribeListener: (() => void) | null = null
 
@@ -28,10 +27,18 @@ import { audioModes } from "./audio/audio-modes"
         animate()
     }
 
+    let currentPlayId = 0
+
     const playAudioMode = async (index: number) => {
-        // Stop any currently playing audio and clear visuals
-        audioController.jsonPlayer.stop()
+        const playId = ++currentPlayId
+
+        // Fade out and stop current audio, then clear visuals
+        await audioController.fadeOutAndStop()
         guitar.stopVisualization()
+
+        // Brief silence gap before starting the next mode
+        await new Promise<void>((resolve) => setTimeout(resolve, 500))
+        if (playId !== currentPlayId) return
 
         const audioMode = audioModes[index]
 
@@ -40,21 +47,25 @@ import { audioModes } from "./audio/audio-modes"
                 audioMode.midiPath,
                 audioMode.playConfig,
             )
+            if (playId !== currentPlayId) return
             audioController.midiPlayer.play()
         } else if (audioMode.type === "json") {
             // Load audio data and pass to guitar visualizer
             const response = await fetch(audioMode.jsonPath)
+            if (playId !== currentPlayId) return
             const jsonData = await response.json()
             await guitar.load(
                 jsonData,
                 audioMode.playConfig?.durationMultiplier,
             )
+            if (playId !== currentPlayId) return
 
             await audioController.jsonPlayer.load(
                 audioMode.jsonPath,
                 audioMode.playConfig,
                 audioMode.loop,
             )
+            if (playId !== currentPlayId) return
             // Re-sync the visualizer on every loop iteration
             audioController.jsonPlayer.onPlay((t) =>
                 guitar.startVisualization(t),

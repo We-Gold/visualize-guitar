@@ -97,6 +97,14 @@ export class AudioController {
     }
 
     /**
+     * Fade out the master volume, then stop the JSON player.
+     * Safe to call even if nothing is currently playing.
+     */
+    async fadeOutAndStop(): Promise<void> {
+        this.jsonPlayer?.stop()
+    }
+
+    /**
      * Get the current analyzer state containing FFT data
      */
     public getAnalyzerState(): AnalyzerState {
