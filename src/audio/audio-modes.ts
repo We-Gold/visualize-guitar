@@ -37,6 +37,10 @@ export const audioModes: AudioMode[] = [
         description: "E2 A2 D3 G3 B3 E4",
         jsonPath: `${import.meta.env.BASE_URL}data/open-strings.json`,
         loop: { intervalSeconds: 2 },
+        playConfig: {
+            durationMultiplier: 2.5,
+            velocityMultiplier: 1,
+        },
     },
     {
         type: "json",
@@ -44,6 +48,10 @@ export const audioModes: AudioMode[] = [
         description: "E minor pentatonic on low E",
         jsonPath: `${import.meta.env.BASE_URL}data/pentatonic-string6.json`,
         loop: { intervalSeconds: 1.5 },
+        playConfig: {
+            durationMultiplier: 1.5,
+            velocityMultiplier: 1,
+        },
     },
     {
         type: "json",
