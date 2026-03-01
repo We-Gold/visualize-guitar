@@ -40,16 +40,15 @@ export class FrequencyPlotter {
     private height: number
     private svg: any
     private compositeBars: any
-    private stringBarGroups: any[] = []
-    private laneYScales: d3.ScaleLinear<number, number>[] = []
+    private canvas!: HTMLCanvasElement
+    private ctx!: CanvasRenderingContext2D
+    private dpr: number = 1
+    private lastStringFft: (Float32Array | null)[] = Array(6).fill(null)
     private yScale: d3.ScaleLinear<number, number>
     private margin = PLOT_CONFIG.margin
     private mode: FrequencyMode = "composite"
     private iconExpand!: SVGGElement
     private iconCollapse!: SVGGElement
-    private lAxisPath: any
-    private xAxisLabel: any
-    private yAxisLabel: any
 
     constructor(
         containerSelector: string,
@@ -168,7 +167,7 @@ export class FrequencyPlotter {
         // ── Axis labels ──────────────────────────────────────────────────────
 
         // X axis label: "Frequency" centered below chart
-        this.xAxisLabel = this.svg
+        this.svg
             .append("text")
             .attr("x", this.margin.left + innerWidth / 2)
             .attr("y", this.height - 5)
@@ -179,7 +178,7 @@ export class FrequencyPlotter {
             .text("Frequency")
 
         // Y axis label: "Amplitude (dB)" rotated on the left
-        this.yAxisLabel = this.svg
+        this.svg
             .append("text")
             .attr(
                 "transform",
@@ -210,54 +209,6 @@ export class FrequencyPlotter {
             })
             .style("filter", "url(#barInner)")
 
-        // ── Per-string bar groups: 6 stacked lanes ───────────────────────────
-        // Hidden by default; shown when mode = "per-string"
-        const laneHeight = innerHeight / 6
-        for (let i = 0; i < 6; i++) {
-            // Per-lane Y scale: 0–100 normalized dB maps to lane height
-            const laneYScale = d3
-                .scaleLinear()
-                .domain([0, 100])
-                .range([laneHeight, 0])
-            this.laneYScales[i] = laneYScale
-
-            const laneGroup = g
-                .append("g")
-                .attr("class", `bar-string-${i + 1}`)
-                .attr("transform", `translate(0, ${i * laneHeight})`)
-                .style("display", "none")
-
-            // String label in left margin
-            if (PLOT_CONFIG.showStringLabels) {
-                laneGroup
-                    .append("text")
-                    .attr("x", -(this.margin.left - 4))
-                    .attr("y", laneHeight / 2)
-                    .attr("dominant-baseline", "middle")
-                    .attr("text-anchor", "start")
-                    .attr("fill", STRING_WAVEFORM_COLORS[i])
-                    .attr("font-size", "14px")
-                    .attr("font-family", "Inconsolata, monospace")
-                    .attr("pointer-events", "none")
-                    .text(STRING_LABELS[i])
-            }
-
-            const bars = laneGroup
-                .selectAll("rect")
-                .data(d3.range(NUM_BARS))
-                .enter()
-                .append("rect")
-                .attr("x", (_d: any, j: any) => (j / NUM_BARS) * innerWidth)
-                .attr("width", innerWidth / NUM_BARS - 1)
-                .attr("y", laneHeight)
-                .attr("height", 0)
-                .style("fill", STRING_WAVEFORM_COLORS[i])
-                .style("opacity", 0.85)
-                .style("filter", "url(#barInner)")
-
-            this.stringBarGroups[i] = bars
-        }
-
         // ── Glass L-axis (rendered on top of bars) ───────────────────────────
         // Single rounded L-path: Y arm + X arm joined seamlessly at the
         // bottom-left. AXIS_T = arm thickness, r = corner/cap radius.
@@ -283,11 +234,25 @@ export class FrequencyPlotter {
             "Z",
         ].join(" ")
 
-        this.lAxisPath = g
-            .append("path")
+        g.append("path")
             .attr("d", lPath)
             .style("fill", "rgba(168,168,168,0.2)")
             .style("pointer-events", "none")
+
+        // ── Per-string canvas ─────────────────────────────────────────────────
+        // Hidden by default; shown when mode = "per-string"
+        this.dpr = window.devicePixelRatio || 1
+        this.canvas = document.createElement("canvas")
+        this.canvas.width = Math.round(this.width * this.dpr)
+        this.canvas.height = Math.round(this.height * this.dpr)
+        this.canvas.style.width = `${this.width}px`
+        this.canvas.style.height = `${this.height}px`
+        this.canvas.style.display = "none"
+        this.canvas.style.background = "rgba(0, 0, 0, 0.8)"
+        this.canvas.style.borderRadius = "4px"
+        this.container.appendChild(this.canvas)
+        this.ctx = this.canvas.getContext("2d")!
+        this.ctx.scale(this.dpr, this.dpr)
 
         // Apply initial mode
         this.setMode(this.mode)
@@ -304,20 +269,11 @@ export class FrequencyPlotter {
         this.iconExpand.style.display = isPerString ? "none" : ""
         this.iconCollapse.style.display = isPerString ? "" : "none"
 
-        // Show/hide the composite bars
-        this.compositeBars.style("display", isPerString ? "none" : null)
+        // Swap SVG (composite) vs canvas (per-string)
+        this.svg.style("display", isPerString ? "none" : null)
+        this.canvas.style.display = isPerString ? "block" : "none"
 
-        // Glass L-axis and axis labels only make sense in composite mode
-        this.lAxisPath.style("display", isPerString ? "none" : null)
-        this.xAxisLabel.style("display", isPerString ? "none" : null)
-        this.yAxisLabel.style("display", isPerString ? "none" : null)
-
-        // Show/hide all per-string lane groups
-        for (let s = 1; s <= 6; s++) {
-            this.svg
-                .select(`.bar-string-${s}`)
-                .style("display", isPerString ? null : "none")
-        }
+        if (isPerString) this.redrawCanvas()
     }
 
     /**
@@ -337,23 +293,65 @@ export class FrequencyPlotter {
                 .attr("y", (d: any) => this.yScale(d))
                 .attr("height", (d: any) => innerHeight - this.yScale(d))
         } else {
-            const laneHeight = innerHeight / 6
             for (let i = 0; i < 6; i++) {
                 const fft = state.stringFftValues?.[i]
-                if (!fft || fft.length === 0) continue
-                const data = this.downsampleFFT(fft, NUM_BARS)
-                const laneY = this.laneYScales[i]
-                this.stringBarGroups[i]
-                    .data(data)
-                    .transition()
-                    .duration(50)
-                    .attr("y", (d: any) => laneY(d))
-                    .attr("height", (d: any) => laneHeight - laneY(d))
+                this.lastStringFft[i] = fft && fft.length > 0 ? fft : null
             }
+            this.redrawCanvas()
         }
     }
 
-    // ── Icon construction ────────────────────────────────────────────────────
+    // ── Canvas per-string rendering ──────────────────────────────────────────
+
+    private redrawCanvas(): void {
+        const { ctx, width, height, margin } = this
+        const innerWidth = width - margin.left - margin.right
+        const innerHeight = height - margin.top - margin.bottom
+        const laneHeight = innerHeight / 6
+        const barW = innerWidth / NUM_BARS
+
+        ctx.clearRect(0, 0, width, height)
+        ctx.save()
+        ctx.translate(margin.left, margin.top)
+
+        for (let i = 0; i < 6; i++) {
+            ctx.save()
+            ctx.translate(0, i * laneHeight)
+
+            // String label in left margin — baseline-aligned with bar bottom
+            if (PLOT_CONFIG.showStringLabels) {
+                ctx.fillStyle = STRING_WAVEFORM_COLORS[i]
+                ctx.font = "14px Inconsolata, monospace"
+                ctx.textBaseline = "bottom"
+                ctx.textAlign = "left"
+                ctx.fillText(
+                    STRING_LABELS[i],
+                    -(margin.left - 4),
+                    laneHeight - 3,
+                )
+            }
+
+            // Bars
+            ctx.fillStyle = STRING_WAVEFORM_COLORS[i]
+            ctx.globalAlpha = 0.85
+            const fft = this.lastStringFft[i]
+            if (fft) {
+                const data = this.downsampleFFT(fft, NUM_BARS)
+                for (let j = 0; j < NUM_BARS; j++) {
+                    const barH = (data[j] / 100) * laneHeight
+                    ctx.fillRect(j * barW, laneHeight - barH, barW - 1, barH)
+                }
+            }
+            // No data yet — draw nothing; canvas stays dark
+            ctx.globalAlpha = 1
+
+            ctx.restore()
+        }
+
+        ctx.restore()
+    }
+
+    // ── Icon construction ──────────────────────────────────────────────────
 
     /**
      * Build the toggle SVG with two swappable groups:
