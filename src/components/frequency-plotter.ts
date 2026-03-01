@@ -7,17 +7,32 @@ export type FrequencyMode = "composite" | "per-string"
 // ── Plot configuration ───────────────────────────────────────────────────────
 const PLOT_CONFIG = {
     width: 360,
-    height: 250,
+    height: 320,
     // Position of the container within the page
-    top: "50px",
+    top: "20px",
     right: "20px",
     // Inner chart margins (space reserved for axes and labels)
     margin: { top: 14, right: 10, bottom: 24, left: 40 },
     // White glow intensity for bars and axes (0 = none, 1 = full)
     glowOpacity: 0.05,
+    /** Whether to render string name labels in per-string mode. */
+    showStringLabels: true,
 }
 
 const NUM_BARS = 64
+const STRING_LABELS = ["e", "B", "G", "D", "A", "E"]
+
+// ── SVG helpers ──────────────────────────────────────────────────────────────
+const SVG_NS = "http://www.w3.org/2000/svg"
+
+function makeSvgEl<K extends keyof SVGElementTagNameMap>(
+    tag: K,
+    attrs: Record<string, string | number>,
+): SVGElementTagNameMap[K] {
+    const el = document.createElementNS(SVG_NS, tag)
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v))
+    return el
+}
 
 export class FrequencyPlotter {
     private container: HTMLElement
@@ -26,10 +41,15 @@ export class FrequencyPlotter {
     private svg: any
     private compositeBars: any
     private stringBarGroups: any[] = []
+    private laneYScales: d3.ScaleLinear<number, number>[] = []
     private yScale: d3.ScaleLinear<number, number>
     private margin = PLOT_CONFIG.margin
     private mode: FrequencyMode = "composite"
-    private toggleBtn!: HTMLButtonElement
+    private iconExpand!: SVGGElement
+    private iconCollapse!: SVGGElement
+    private lAxisPath: any
+    private xAxisLabel: any
+    private yAxisLabel: any
 
     constructor(
         containerSelector: string,
@@ -48,12 +68,21 @@ export class FrequencyPlotter {
         }
         this.container = container as HTMLElement
 
-        // Position container absolutely in top-right; relative so the button
-        // can be absolutely placed inside it
-        this.container.style.position = "absolute"
-        this.container.style.top = PLOT_CONFIG.top
-        this.container.style.right = PLOT_CONFIG.right
-        this.container.style.zIndex = "10"
+        // Container: flex row with icon on left, SVG on right
+        Object.assign(this.container.style, {
+            position: "absolute",
+            top: PLOT_CONFIG.top,
+            right: PLOT_CONFIG.right,
+            zIndex: "10",
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: "8px",
+        })
+
+        // ── Toggle icon ──────────────────────────────────────────────────────
+        const iconSvg = this.buildToggleIcon()
+        this.container.appendChild(iconSvg)
 
         // Create SVG
         this.svg = d3
@@ -139,7 +168,7 @@ export class FrequencyPlotter {
         // ── Axis labels ──────────────────────────────────────────────────────
 
         // X axis label: "Frequency" centered below chart
-        this.svg
+        this.xAxisLabel = this.svg
             .append("text")
             .attr("x", this.margin.left + innerWidth / 2)
             .attr("y", this.height - 5)
@@ -150,7 +179,7 @@ export class FrequencyPlotter {
             .text("Frequency")
 
         // Y axis label: "Amplitude (dB)" rotated on the left
-        this.svg
+        this.yAxisLabel = this.svg
             .append("text")
             .attr(
                 "transform",
@@ -174,38 +203,59 @@ export class FrequencyPlotter {
             .attr("y", innerHeight)
             .attr("height", 0)
             .style("fill", (_d: any, i: any) => {
-                // Red-to-amber scale: dark crimson at low freq, bright orange-red at high
+                // Grayscale ramp: dark gray at low freq, lighter at high
                 const t = i / NUM_BARS
-                const hue = t * 28
-                const saturation = 75 + t * 25
-                const lightness = 22 + t * 33
-                return `hsl(${hue}, ${saturation}%, ${lightness}%)`
+                const lightness = 25 + t * 40
+                return `hsl(0, 0%, ${lightness}%)`
             })
             .style("filter", "url(#barInner)")
 
-        // ── Per-string bar groups (string 6 → 1 so string 1 renders on top) ──
-        // Groups are hidden by default; shown when mode = "per-string"
-        for (let s = 6; s >= 1; s--) {
-            const stringGroup = g
+        // ── Per-string bar groups: 6 stacked lanes ───────────────────────────
+        // Hidden by default; shown when mode = "per-string"
+        const laneHeight = innerHeight / 6
+        for (let i = 0; i < 6; i++) {
+            // Per-lane Y scale: 0–100 normalized dB maps to lane height
+            const laneYScale = d3
+                .scaleLinear()
+                .domain([0, 100])
+                .range([laneHeight, 0])
+            this.laneYScales[i] = laneYScale
+
+            const laneGroup = g
                 .append("g")
-                .attr("class", `bar-string-${s}`)
+                .attr("class", `bar-string-${i + 1}`)
+                .attr("transform", `translate(0, ${i * laneHeight})`)
                 .style("display", "none")
 
-            const bars = stringGroup
+            // String label in left margin
+            if (PLOT_CONFIG.showStringLabels) {
+                laneGroup
+                    .append("text")
+                    .attr("x", -(this.margin.left - 4))
+                    .attr("y", laneHeight / 2)
+                    .attr("dominant-baseline", "middle")
+                    .attr("text-anchor", "start")
+                    .attr("fill", STRING_WAVEFORM_COLORS[i])
+                    .attr("font-size", "14px")
+                    .attr("font-family", "Inconsolata, monospace")
+                    .attr("pointer-events", "none")
+                    .text(STRING_LABELS[i])
+            }
+
+            const bars = laneGroup
                 .selectAll("rect")
                 .data(d3.range(NUM_BARS))
                 .enter()
                 .append("rect")
-                .attr("x", (_d: any, i: any) => (i / NUM_BARS) * innerWidth)
+                .attr("x", (_d: any, j: any) => (j / NUM_BARS) * innerWidth)
                 .attr("width", innerWidth / NUM_BARS - 1)
-                .attr("y", innerHeight)
+                .attr("y", laneHeight)
                 .attr("height", 0)
-                .style("fill", STRING_WAVEFORM_COLORS[s - 1])
-                .style("opacity", 0.55)
+                .style("fill", STRING_WAVEFORM_COLORS[i])
+                .style("opacity", 0.85)
                 .style("filter", "url(#barInner)")
 
-            // Store in index order (0 = string 1) for easy access in updateBars
-            this.stringBarGroups[s - 1] = bars
+            this.stringBarGroups[i] = bars
         }
 
         // ── Glass L-axis (rendered on top of bars) ───────────────────────────
@@ -233,34 +283,11 @@ export class FrequencyPlotter {
             "Z",
         ].join(" ")
 
-        g.append("path")
+        this.lAxisPath = g
+            .append("path")
             .attr("d", lPath)
             .style("fill", "rgba(168,168,168,0.2)")
             .style("pointer-events", "none")
-
-        // ── Mode toggle button (hidden; setMode() still works programmatically) ─
-        this.toggleBtn = document.createElement("button")
-        this.toggleBtn.textContent = "Per-string view"
-        Object.assign(this.toggleBtn.style, {
-            display: "none",
-            position: "absolute",
-            bottom: "6px",
-            left: "6px",
-            padding: "2px 7px",
-            fontSize: "10px",
-            fontFamily: "sans-serif",
-            background: "rgba(255,255,255,0.12)",
-            color: "rgba(255,255,255,0.75)",
-            border: "1px solid rgba(255,255,255,0.25)",
-            borderRadius: "3px",
-            cursor: "pointer",
-            zIndex: "1",
-        })
-        this.toggleBtn.addEventListener("click", () => {
-            this.setMode(this.mode === "composite" ? "per-string" : "composite")
-        })
-        this.container.style.position = "absolute"
-        this.container.appendChild(this.toggleBtn)
 
         // Apply initial mode
         this.setMode(this.mode)
@@ -273,19 +300,24 @@ export class FrequencyPlotter {
         this.mode = mode
         const isPerString = mode === "per-string"
 
+        // Swap toggle icons
+        this.iconExpand.style.display = isPerString ? "none" : ""
+        this.iconCollapse.style.display = isPerString ? "" : "none"
+
         // Show/hide the composite bars
         this.compositeBars.style("display", isPerString ? "none" : null)
 
-        // Show/hide all per-string groups
+        // Glass L-axis and axis labels only make sense in composite mode
+        this.lAxisPath.style("display", isPerString ? "none" : null)
+        this.xAxisLabel.style("display", isPerString ? "none" : null)
+        this.yAxisLabel.style("display", isPerString ? "none" : null)
+
+        // Show/hide all per-string lane groups
         for (let s = 1; s <= 6; s++) {
             this.svg
                 .select(`.bar-string-${s}`)
                 .style("display", isPerString ? null : "none")
         }
-
-        this.toggleBtn.textContent = isPerString
-            ? "Composite view"
-            : "Per-string view"
     }
 
     /**
@@ -305,18 +337,112 @@ export class FrequencyPlotter {
                 .attr("y", (d: any) => this.yScale(d))
                 .attr("height", (d: any) => innerHeight - this.yScale(d))
         } else {
+            const laneHeight = innerHeight / 6
             for (let i = 0; i < 6; i++) {
                 const fft = state.stringFftValues?.[i]
                 if (!fft || fft.length === 0) continue
                 const data = this.downsampleFFT(fft, NUM_BARS)
+                const laneY = this.laneYScales[i]
                 this.stringBarGroups[i]
                     .data(data)
                     .transition()
                     .duration(50)
-                    .attr("y", (d: any) => this.yScale(d))
-                    .attr("height", (d: any) => innerHeight - this.yScale(d))
+                    .attr("y", (d: any) => laneY(d))
+                    .attr("height", (d: any) => laneHeight - laneY(d))
             }
         }
+    }
+
+    // ── Icon construction ────────────────────────────────────────────────────
+
+    /**
+     * Build the toggle SVG with two swappable groups:
+     *   iconExpand   – shown in composite mode  (click → per-string)
+     *   iconCollapse – shown in per-string mode (click → composite)
+     */
+    private buildToggleIcon(): SVGSVGElement {
+        const W = 18
+        const H = 60
+        const cx = W / 2
+        const strokeAttrs = {
+            stroke: "rgba(255,255,255,0.55)",
+            "stroke-width": "1.5",
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+            fill: "none",
+        }
+
+        const svg = makeSvgEl("svg", {
+            width: W,
+            height: H,
+            viewBox: `0 0 ${W} ${H}`,
+        })
+        svg.style.cursor = "pointer"
+        svg.style.flexShrink = "0"
+
+        svg.addEventListener("mouseenter", () => {
+            for (const g of [this.iconExpand, this.iconCollapse])
+                g.setAttribute("stroke", "rgba(255,255,255,0.9)")
+        })
+        svg.addEventListener("mouseleave", () => {
+            for (const g of [this.iconExpand, this.iconCollapse])
+                g.setAttribute("stroke", "rgba(255,255,255,0.55)")
+        })
+        svg.addEventListener("click", () => {
+            this.setMode(this.mode === "composite" ? "per-string" : "composite")
+        })
+
+        const midY = H / 2
+        const chevH = 5
+        const chevW = 5
+
+        const makeLine = (parent: SVGGElement, y: number) => {
+            parent.appendChild(
+                makeSvgEl("line", { x1: 2, y1: y, x2: W - 2, y2: y }),
+            )
+        }
+
+        // ── Expand group (composite → per-string) ────────────────────────────
+        // 1 bar in the centre; outward chevrons (∧ above, ∨ below)
+        const expTopY = 12
+        const expBotY = H - 12
+        this.iconExpand = makeSvgEl("g", strokeAttrs) as SVGGElement
+        // Shown by default (composite is the default mode)
+        makeLine(this.iconExpand, midY)
+        this.iconExpand.appendChild(
+            makeSvgEl("polyline", {
+                points: `${cx - chevW},${expTopY + chevH} ${cx},${expTopY - chevH} ${cx + chevW},${expTopY + chevH}`,
+            }),
+        )
+        this.iconExpand.appendChild(
+            makeSvgEl("polyline", {
+                points: `${cx - chevW},${expBotY - chevH} ${cx},${expBotY + chevH} ${cx + chevW},${expBotY - chevH}`,
+            }),
+        )
+        svg.appendChild(this.iconExpand)
+
+        // ── Collapse group (per-string → composite) ──────────────────────────
+        // 3 bars clustered in the centre; inward chevrons (∨ above, ∧ below)
+        const colTopY = 16
+        const colBotY = H - 16
+        this.iconCollapse = makeSvgEl("g", strokeAttrs) as SVGGElement
+        this.iconCollapse.style.display = "none"
+        makeLine(this.iconCollapse, midY - 4)
+        makeLine(this.iconCollapse, midY)
+        makeLine(this.iconCollapse, midY + 4)
+        this.iconCollapse.appendChild(
+            makeSvgEl("polyline", {
+                points: `${cx - chevW},${colTopY - chevH} ${cx},${colTopY + chevH} ${cx + chevW},${colTopY - chevH}`,
+            }),
+        )
+        this.iconCollapse.appendChild(
+            makeSvgEl("polyline", {
+                points: `${cx - chevW},${colBotY + chevH} ${cx},${colBotY - chevH} ${cx + chevW},${colBotY + chevH}`,
+            }),
+        )
+        svg.appendChild(this.iconCollapse)
+
+        return svg
     }
 
     /**
