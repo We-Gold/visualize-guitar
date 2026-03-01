@@ -248,7 +248,6 @@ export class FrequencyPlotter {
         this.canvas.style.width = `${this.width}px`
         this.canvas.style.height = `${this.height}px`
         this.canvas.style.display = "none"
-        this.canvas.style.background = "rgba(0, 0, 0, 0.8)"
         this.canvas.style.borderRadius = "4px"
         this.container.appendChild(this.canvas)
         this.ctx = this.canvas.getContext("2d")!

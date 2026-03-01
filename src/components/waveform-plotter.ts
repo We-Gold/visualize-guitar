@@ -91,7 +91,6 @@ export class WaveformPlotter {
         this.canvas.style.width = `${width}px`
         this.canvas.style.height = `${height}px`
         this.canvas.style.display = "block"
-        this.canvas.style.background = "rgba(0, 0, 0, 0.8)"
         this.canvas.style.borderRadius = "4px"
         this.container.appendChild(this.canvas)
 
