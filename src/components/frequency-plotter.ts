@@ -1,4 +1,3 @@
-import * as d3 from "d3"
 import type { AnalyzerState } from "../audio/audio-controller"
 import { STRING_WAVEFORM_COLORS } from "./string-colors"
 
@@ -13,8 +12,6 @@ const PLOT_CONFIG = {
     right: "20px",
     // Inner chart margins (space reserved for axes and labels)
     margin: { top: 14, right: 10, bottom: 24, left: 40 },
-    // White glow intensity for bars and axes (0 = none, 1 = full)
-    glowOpacity: 0.05,
     /** Whether to render string name labels in per-string mode. */
     showStringLabels: true,
 }
@@ -39,13 +36,11 @@ export class FrequencyPlotter {
     private container: HTMLElement
     private width: number
     private height: number
-    private svg: any
-    private compositeBars: any
     private canvas!: HTMLCanvasElement
     private ctx!: CanvasRenderingContext2D
     private dpr: number = 1
+    private lastFft: Float32Array | null = null
     private lastStringFft: (Float32Array | null)[] = Array(6).fill(null)
-    private yScale: d3.ScaleLinear<number, number>
     private margin = PLOT_CONFIG.margin
     private mode: FrequencyMode = "per-string"
     private iconExpand!: SVGGElement
@@ -84,171 +79,13 @@ export class FrequencyPlotter {
         const iconSvg = this.buildToggleIcon()
         this.container.appendChild(iconSvg)
 
-        // Create SVG
-        this.svg = d3
-            .select(this.container)
-            .append("svg")
-            .attr("width", this.width)
-            .attr("height", this.height)
-            .style("display", "block")
-
-        const innerWidth = this.width - this.margin.left - this.margin.right
-        const innerHeight = this.height - this.margin.top - this.margin.bottom
-
-        // Y scale: FFT data is dBFS, normalized to 0–100 via (value + 100)
-        this.yScale = d3.scaleLinear().domain([0, 100]).range([innerHeight, 0])
-
-        // ── SVG filters ───────────────────────────────────────────────────────
-        const defs = this.svg.append("defs")
-
-        // White outer glow applied to the whole chart group
-        const glowFilter = defs
-            .append("filter")
-            .attr("id", "plotGlow")
-            .attr("x", "-40%")
-            .attr("y", "-40%")
-            .attr("width", "180%")
-            .attr("height", "180%")
-        glowFilter
-            .append("feDropShadow")
-            .attr("dx", 0)
-            .attr("dy", 0)
-            .attr("stdDeviation", 11)
-            .attr("flood-color", "white")
-            .attr("flood-opacity", PLOT_CONFIG.glowOpacity)
-
-        // Dark inner shadow applied per-bar for depth
-        const innerFilter = defs
-            .append("filter")
-            .attr("id", "barInner")
-            .attr("x", "0")
-            .attr("y", "0")
-            .attr("width", "100%")
-            .attr("height", "100%")
-        innerFilter
-            .append("feColorMatrix")
-            .attr("in", "SourceAlpha")
-            .attr("result", "alpha")
-            .attr("type", "matrix")
-            .attr("values", "0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 127 0")
-        innerFilter
-            .append("feGaussianBlur")
-            .attr("in", "alpha")
-            .attr("stdDeviation", 1)
-            .attr("result", "blur")
-        innerFilter
-            .append("feComposite")
-            .attr("in", "blur")
-            .attr("in2", "alpha")
-            .attr("operator", "arithmetic")
-            .attr("k2", -1)
-            .attr("k3", 1)
-            .attr("result", "inner")
-        innerFilter
-            .append("feColorMatrix")
-            .attr("in", "inner")
-            .attr("result", "colored")
-            .attr("type", "matrix")
-            .attr("values", "0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.76 0")
-        innerFilter
-            .append("feBlend")
-            .attr("in", "SourceGraphic")
-            .attr("in2", "colored")
-            .attr("mode", "normal")
-
-        // Root group — white glow filter wraps bars + axis together
-        const g = this.svg
-            .append("g")
-            .attr(
-                "transform",
-                `translate(${this.margin.left}, ${this.margin.top})`,
-            )
-            .attr("filter", "url(#plotGlow)")
-
-        // ── Axis labels ──────────────────────────────────────────────────────
-
-        // X axis label: "Frequency" centered below chart
-        this.svg
-            .append("text")
-            .attr("x", this.margin.left + innerWidth / 2)
-            .attr("y", this.height - 5)
-            .attr("text-anchor", "middle")
-            .attr("fill", "white")
-            .attr("font-size", "12px")
-            .attr("font-family", "Inconsolata, monospace")
-            .text("Frequency")
-
-        // Y axis label: "Amplitude (dB)" rotated on the left
-        this.svg
-            .append("text")
-            .attr(
-                "transform",
-                `translate(22, ${this.margin.top + innerHeight / 2}) rotate(-90)`,
-            )
-            .attr("text-anchor", "middle")
-            .attr("fill", "white")
-            .attr("font-size", "12px")
-            .attr("font-family", "Inconsolata, monospace")
-            .text("Amplitude (dB)")
-
-        // ── Composite bar group ───────────────────────────────────────────────
-        this.compositeBars = g
-            .selectAll(".bar-composite")
-            .data(d3.range(NUM_BARS))
-            .enter()
-            .append("rect")
-            .attr("class", "bar-composite")
-            .attr("x", (_d: any, i: any) => (i / NUM_BARS) * innerWidth)
-            .attr("width", innerWidth / NUM_BARS - 1)
-            .attr("y", innerHeight)
-            .attr("height", 0)
-            .style("fill", (_d: any, i: any) => {
-                // Grayscale ramp: dark gray at low freq, lighter at high
-                const t = i / NUM_BARS
-                const lightness = 25 + t * 40
-                return `hsl(0, 0%, ${lightness}%)`
-            })
-            .style("filter", "url(#barInner)")
-
-        // ── Glass L-axis (rendered on top of bars) ───────────────────────────
-        // Single rounded L-path: Y arm + X arm joined seamlessly at the
-        // bottom-left. AXIS_T = arm thickness, r = corner/cap radius.
-        const AXIS_T = 4
-        const r = 2
-        const W = innerWidth
-        const H = innerHeight
-        const T = AXIS_T
-
-        // Traced clockwise. Concave inner L corner uses sweep=0;
-        // all convex corners and pill caps use sweep=1.
-        const lPath = [
-            `M 0 ${H - r}`,
-            `A ${r} ${r} 0 0 0 ${r} ${H}`, // concave inner L corner
-            `H ${W - r}`, // X arm inner edge
-            `A ${r} ${r} 0 0 1 ${W} ${H + r}`, // right cap top
-            `A ${r} ${r} 0 0 1 ${W - r} ${H + T}`, // right cap bottom
-            `H ${-T + r}`, // X arm outer edge
-            `A ${r} ${r} 0 0 1 ${-T} ${H + T - r}`, // outer bottom-left corner
-            `V ${r}`, // Y arm outer edge
-            `A ${r} ${r} 0 0 1 ${-T + r} 0`, // top cap left
-            `A ${r} ${r} 0 0 1 0 ${r}`, // top cap right
-            "Z",
-        ].join(" ")
-
-        g.append("path")
-            .attr("d", lPath)
-            .style("fill", "rgba(168,168,168,0.2)")
-            .style("pointer-events", "none")
-
-        // ── Per-string canvas ─────────────────────────────────────────────────
-        // Hidden by default; shown when mode = "per-string"
+        // ── Canvas ────────────────────────────────────────────────────────────
         this.dpr = window.devicePixelRatio || 1
         this.canvas = document.createElement("canvas")
         this.canvas.width = Math.round(this.width * this.dpr)
         this.canvas.height = Math.round(this.height * this.dpr)
         this.canvas.style.width = `${this.width}px`
         this.canvas.style.height = `${this.height}px`
-        this.canvas.style.display = "none"
         this.canvas.style.borderRadius = "4px"
         this.container.appendChild(this.canvas)
         this.ctx = this.canvas.getContext("2d")!
@@ -269,11 +106,8 @@ export class FrequencyPlotter {
         this.iconExpand.style.display = isPerString ? "none" : ""
         this.iconCollapse.style.display = isPerString ? "" : "none"
 
-        // Swap SVG (composite) vs canvas (per-string)
-        this.svg.style("display", isPerString ? "none" : null)
-        this.canvas.style.display = isPerString ? "block" : "none"
-
         if (isPerString) this.redrawCanvas()
+        else this.redrawComposite()
     }
 
     /**
@@ -282,16 +116,9 @@ export class FrequencyPlotter {
      * state.stringFftValues for each string.
      */
     public updateBars(state: AnalyzerState): void {
-        const innerHeight = this.height - this.margin.top - this.margin.bottom
-
         if (this.mode === "composite") {
-            const data = this.downsampleFFT(state.fftValues, NUM_BARS)
-            this.compositeBars
-                .data(data)
-                .transition()
-                .duration(50)
-                .attr("y", (d: any) => this.yScale(d))
-                .attr("height", (d: any) => innerHeight - this.yScale(d))
+            this.lastFft = state.fftValues
+            this.redrawComposite()
         } else {
             for (let i = 0; i < 6; i++) {
                 const fft = state.stringFftValues?.[i]
@@ -299,6 +126,54 @@ export class FrequencyPlotter {
             }
             this.redrawCanvas()
         }
+    }
+
+    // ── Canvas composite rendering ────────────────────────────────────────────
+
+    private redrawComposite(): void {
+        const { ctx, width, height, margin } = this
+        const innerWidth = width - margin.left - margin.right
+        const innerHeight = height - margin.top - margin.bottom
+        const barW = innerWidth / NUM_BARS
+
+        ctx.clearRect(0, 0, width, height)
+        ctx.save()
+        ctx.translate(margin.left, margin.top)
+
+        // Bars with grayscale ramp: dark gray at low freq, lighter at high
+        ctx.globalAlpha = 0.85
+        const fft = this.lastFft
+        if (fft) {
+            const data = this.downsampleFFT(fft, NUM_BARS)
+            for (let j = 0; j < NUM_BARS; j++) {
+                const t = j / NUM_BARS
+                const lightness = 25 + t * 40
+                ctx.fillStyle = `hsl(0, 0%, ${lightness}%)`
+                const barH = (data[j] / 100) * innerHeight
+                ctx.fillRect(j * barW, innerHeight - barH, barW - 1, barH)
+            }
+        }
+        ctx.globalAlpha = 1
+
+        ctx.restore()
+
+        // ── Axis titles ───────────────────────────────────────────────────────
+        ctx.fillStyle = "white"
+        ctx.font = "12px Inconsolata, monospace"
+
+        // Bottom: "Frequency" centered below the chart area
+        ctx.textAlign = "center"
+        ctx.textBaseline = "bottom"
+        ctx.fillText("Frequency", margin.left + innerWidth / 2, height - 5)
+
+        // Right: "Amplitude (dB)" rotated, aligned to the right edge
+        ctx.save()
+        ctx.translate(width - 8, margin.top + innerHeight / 2)
+        ctx.rotate(Math.PI / 2)
+        ctx.textAlign = "center"
+        ctx.textBaseline = "top"
+        ctx.fillText("Amplitude (dB)", 0, 0)
+        ctx.restore()
     }
 
     // ── Canvas per-string rendering ──────────────────────────────────────────
