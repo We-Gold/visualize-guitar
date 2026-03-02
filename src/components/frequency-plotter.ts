@@ -47,7 +47,7 @@ export class FrequencyPlotter {
     private lastStringFft: (Float32Array | null)[] = Array(6).fill(null)
     private yScale: d3.ScaleLinear<number, number>
     private margin = PLOT_CONFIG.margin
-    private mode: FrequencyMode = "composite"
+    private mode: FrequencyMode = "per-string"
     private iconExpand!: SVGGElement
     private iconCollapse!: SVGGElement
 

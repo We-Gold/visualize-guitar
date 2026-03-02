@@ -6,6 +6,7 @@ import { FrequencyPlotter } from "./components/frequency-plotter"
 import { WaveformPlotter } from "./components/waveform-plotter"
 import { AudioController } from "./audio/audio-controller"
 import { audioModes } from "./audio/audio-modes"
+import { MidiViewer } from "./components/midi-viewer"
 ;(async () => {
     const audioController = new AudioController()
     await audioController.init()
@@ -16,12 +17,31 @@ import { audioModes } from "./audio/audio-modes"
     // Create waveform plotter
     const waveformPlotter = new WaveformPlotter("#waveform-plot")
 
+    // Create MIDI viewer (hidden by default; shares the same screen slot)
+    const midiViewer = new MidiViewer(document.getElementById("app")!)
+
+    // Toggle between waveform and MIDI views
+    let showingMidi = false
+    const toggleView = () => {
+        showingMidi = !showingMidi
+        if (showingMidi) {
+            waveformPlotter.hide()
+            midiViewer.show()
+        } else {
+            midiViewer.hide()
+            waveformPlotter.show()
+        }
+    }
+    waveformPlotter.addViewToggle(toggleView)
+    midiViewer.addViewToggle(toggleView)
+
     let unsubscribeListener: (() => void) | null = null
 
     const startAnimationLoop = () => {
         const animate = () => {
             audioController.updateAnalyzerState()
             guitar.updateVisuals(Tone.now())
+            midiViewer.updateVisuals(Tone.now())
             requestAnimationFrame(animate)
         }
         animate()
@@ -35,6 +55,7 @@ import { audioModes } from "./audio/audio-modes"
         // Fade out and stop current audio, then clear visuals
         await audioController.fadeOutAndStop()
         guitar.stopVisualization()
+        midiViewer.stopVisualization()
 
         // Brief silence gap before starting the next mode
         await new Promise<void>((resolve) => setTimeout(resolve, 500))
@@ -58,6 +79,7 @@ import { audioModes } from "./audio/audio-modes"
                 jsonData,
                 audioMode.playConfig?.durationMultiplier,
             )
+            midiViewer.load(jsonData, audioMode.playConfig?.durationMultiplier)
             if (playId !== currentPlayId) return
 
             await audioController.jsonPlayer.load(
@@ -66,10 +88,11 @@ import { audioModes } from "./audio/audio-modes"
                 audioMode.loop,
             )
             if (playId !== currentPlayId) return
-            // Re-sync the visualizer on every loop iteration
-            audioController.jsonPlayer.onPlay((t) =>
-                guitar.startVisualization(t),
-            )
+            // Re-sync both visualizers on every loop iteration
+            audioController.jsonPlayer.onPlay((t) => {
+                guitar.startVisualization(t)
+                midiViewer.startVisualization(t)
+            })
             audioController.jsonPlayer.play()
         }
     }

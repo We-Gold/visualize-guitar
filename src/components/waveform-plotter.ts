@@ -46,6 +46,7 @@ export class WaveformPlotter {
     private lastStringData: Float32Array[] = []
     private iconExpand!: SVGGElement
     private iconCollapse!: SVGGElement
+    private onViewToggleCb: (() => void) | null = null
 
     constructor(
         containerSelector: string,
@@ -97,6 +98,10 @@ export class WaveformPlotter {
 
         this.ctx = this.canvas.getContext("2d")!
         this.ctx.scale(this.dpr, this.dpr)
+
+        // ── Music-note view-switch icon (right of canvas) ────────────────────
+        const musicNoteIcon = this.buildMusicNoteIcon()
+        this.container.appendChild(musicNoteIcon)
 
         // Build right-edge fade gradient once (in inner coordinate space)
         const fadeStart = this.innerWidth * (1 - WAVEFORM_CONFIG.fadePercent)
@@ -208,6 +213,115 @@ export class WaveformPlotter {
         )
         svg.appendChild(this.iconCollapse)
 
+        return svg
+    }
+
+    // ── Music-note switch icon ───────────────────────────────────────────────
+
+    private buildMusicNoteIcon(): SVGSVGElement {
+        const W = 18
+        const H = 60
+        const baseStroke = "rgba(255,255,255,0.55)"
+        const baseAttrs = {
+            stroke: baseStroke,
+            "stroke-width": "1.5",
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+            fill: "none",
+        }
+        const svg = makeSvgEl("svg", {
+            width: W,
+            height: H,
+            viewBox: `0 0 ${W} ${H}`,
+        })
+        svg.style.cursor = "pointer"
+        svg.style.flexShrink = "0"
+
+        svg.addEventListener("mouseenter", () => {
+            g.setAttribute("stroke", "rgba(255,255,255,0.9)")
+            g.setAttribute("fill", "rgba(255,255,255,0.9)")
+        })
+        svg.addEventListener("mouseleave", () => {
+            g.setAttribute("stroke", baseStroke)
+            g.setAttribute("fill", baseStroke)
+        })
+        svg.addEventListener("click", () => {
+            if (this.onViewToggleCb) this.onViewToggleCb()
+        })
+
+        const g = makeSvgEl("g", {
+            ...baseAttrs,
+            fill: baseStroke,
+        }) as SVGGElement
+
+        // Two eighth notes joined by a beam, centred vertically
+        const noteY = H / 2 + 10
+        const stemTop = noteY - 14
+        const beamY = stemTop + 2
+
+        // Notehead 1
+        g.appendChild(
+            makeSvgEl("ellipse", {
+                cx: "5.5",
+                cy: String(noteY),
+                rx: "3.2",
+                ry: "2.2",
+                transform: `rotate(-20 5.5 ${noteY})`,
+                fill: baseStroke,
+                stroke: "none",
+            }),
+        )
+        // Notehead 2
+        g.appendChild(
+            makeSvgEl("ellipse", {
+                cx: "12.5",
+                cy: String(noteY - 3),
+                rx: "3.2",
+                ry: "2.2",
+                transform: `rotate(-20 12.5 ${noteY - 3})`,
+                fill: baseStroke,
+                stroke: "none",
+            }),
+        )
+        // Stem 1
+        g.appendChild(
+            makeSvgEl("line", {
+                x1: "8.5",
+                y1: String(noteY - 1.5),
+                x2: "8.5",
+                y2: String(stemTop),
+                stroke: baseStroke,
+                "stroke-width": "1.5",
+                fill: "none",
+            }),
+        )
+        // Stem 2
+        g.appendChild(
+            makeSvgEl("line", {
+                x1: "15.5",
+                y1: String(noteY - 4.5),
+                x2: "15.5",
+                y2: String(stemTop - 3),
+                stroke: baseStroke,
+                "stroke-width": "1.5",
+                fill: "none",
+            }),
+        )
+        // Beam
+        g.appendChild(
+            makeSvgEl("rect", {
+                x: "8.5",
+                y: String(beamY),
+                width: "7",
+                height: "2.5",
+                rx: "1",
+                fill: baseStroke,
+                stroke: "none",
+                transform: `rotate(-12 8.5 ${beamY})`,
+            }),
+        )
+
+        svg.appendChild(g)
         return svg
     }
 
@@ -376,6 +490,21 @@ export class WaveformPlotter {
     public updateStringWaveforms(stringWaveformValues: Float32Array[]): void {
         this.lastStringData = stringWaveformValues
         this.redraw()
+    }
+
+    /** Register callback invoked when the music-note icon is clicked. */
+    public addViewToggle(cb: () => void): void {
+        this.onViewToggleCb = cb
+    }
+
+    /** Show this component. */
+    public show(): void {
+        this.container.style.display = "flex"
+    }
+
+    /** Hide this component. */
+    public hide(): void {
+        this.container.style.display = "none"
     }
 }
 

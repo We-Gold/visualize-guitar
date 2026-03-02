@@ -78,13 +78,15 @@ function easeOut(t: number): number {
     return 1 - (1 - t) * (1 - t)
 }
 
-interface NoteWithKey {
+export interface NoteWithKey {
     key: string
     time: number
     duration: number
     string: number
     fret: number
     velocity: number
+    midi: number
+    name: string
 }
 
 /** Per-string state for animated fret finger slides */
@@ -239,6 +241,8 @@ export class GuitarVisualizer {
                     string: note.string,
                     fret: note.fret,
                     velocity: note.velocity,
+                    midi: note.midi,
+                    name: note.name,
                 })
             })
         })
