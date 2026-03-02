@@ -5,14 +5,15 @@ import type { ActiveNote } from "./string-animator"
 
 // --- SVG coordinate constants (derived from Guitar.svg) ---
 
-/** Center Y position for each string (1 = high E, 6 = low E) */
+/** Center Y position for each string (1 = high e, 6 = low E).
+ * Inverted from SVG slot order: string 6 (low E) is at the top of the guitar body. */
 const STRING_Y: Record<number, number> = {
-    1: 244.16,
-    2: 264.73,
-    3: 285.31,
-    4: 305.89,
-    5: 326.47,
-    6: 347.04,
+    1: 347.04,
+    2: 326.47,
+    3: 305.89,
+    4: 285.31,
+    5: 264.73,
+    6: 244.16,
 }
 
 /** Fill color for each string's indicators */

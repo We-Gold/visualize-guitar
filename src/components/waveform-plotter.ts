@@ -12,7 +12,8 @@ const WAVEFORM_CONFIG = {
     showStringLabels: true,
 }
 
-const STRING_LABELS = ["e", "B", "G", "D", "A", "E"]
+// Labels ordered top→bottom: string 6 (low E) at top, string 1 (high e) at bottom
+const STRING_LABELS = ["E", "A", "D", "G", "B", "e"]
 
 // ── SVG helpers ──────────────────────────────────────────────────────────────
 const SVG_NS = "http://www.w3.org/2000/svg"
@@ -297,16 +298,18 @@ export class WaveformPlotter {
                 )
             }
         } else {
-            // Per-string: 6 stacked lanes, string 1 (e) at top
+            // Per-string: 6 stacked lanes, string 6 (E) at top, string 1 (e) at bottom
             for (let i = 0; i < 6; i++) {
-                const data = this.lastStringData[i]
+                // si maps lane index to string data index: lane 0 (top) = string 6 (low E), lane 5 (bottom) = string 1 (high e)
+                const si = 5 - i
+                const data = this.lastStringData[si]
 
                 ctx.save()
                 ctx.translate(0, i * laneHeight)
 
                 // String label (drawn in left margin, outside the fade region)
                 if (WAVEFORM_CONFIG.showStringLabels) {
-                    ctx.fillStyle = STRING_WAVEFORM_COLORS[i]
+                    ctx.fillStyle = STRING_WAVEFORM_COLORS[si]
                     ctx.font = "14px Inconsolata, monospace"
                     ctx.textBaseline = "middle"
                     ctx.textAlign = "left"
@@ -317,7 +320,7 @@ export class WaveformPlotter {
                     )
                 }
 
-                ctx.strokeStyle = STRING_WAVEFORM_COLORS[i]
+                ctx.strokeStyle = STRING_WAVEFORM_COLORS[si]
                 ctx.lineWidth = 1.2
                 ctx.lineJoin = "round"
                 ctx.lineCap = "round"

@@ -20,7 +20,8 @@ const PLOT_CONFIG = {
 }
 
 const NUM_BARS = 64
-const STRING_LABELS = ["e", "B", "G", "D", "A", "E"]
+// Labels ordered top→bottom: string 6 (low E) at top, string 1 (high e) at bottom
+const STRING_LABELS = ["E", "A", "D", "G", "B", "e"]
 
 // ── SVG helpers ──────────────────────────────────────────────────────────────
 const SVG_NS = "http://www.w3.org/2000/svg"
@@ -314,12 +315,14 @@ export class FrequencyPlotter {
         ctx.translate(margin.left, margin.top)
 
         for (let i = 0; i < 6; i++) {
+            // si maps lane index to string data index: lane 0 (top) = string 6 (low E), lane 5 (bottom) = string 1 (high e)
+            const si = 5 - i
             ctx.save()
             ctx.translate(0, i * laneHeight)
 
             // String label in left margin — baseline-aligned with bar bottom
             if (PLOT_CONFIG.showStringLabels) {
-                ctx.fillStyle = STRING_WAVEFORM_COLORS[i]
+                ctx.fillStyle = STRING_WAVEFORM_COLORS[si]
                 ctx.font = "14px Inconsolata, monospace"
                 ctx.textBaseline = "bottom"
                 ctx.textAlign = "left"
@@ -331,9 +334,9 @@ export class FrequencyPlotter {
             }
 
             // Bars
-            ctx.fillStyle = STRING_WAVEFORM_COLORS[i]
+            ctx.fillStyle = STRING_WAVEFORM_COLORS[si]
             ctx.globalAlpha = 0.85
-            const fft = this.lastStringFft[i]
+            const fft = this.lastStringFft[si]
             if (fft) {
                 const data = this.downsampleFFT(fft, NUM_BARS)
                 for (let j = 0; j < NUM_BARS; j++) {
