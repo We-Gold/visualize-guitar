@@ -14,6 +14,7 @@ const WAVEFORM_CONFIG = {
 
 // Labels ordered top→bottom: string 6 (low E) at top, string 1 (high e) at bottom
 const STRING_LABELS = ["E", "A", "D", "G", "B", "e"]
+const COMPOSITE_LABEL = "all"
 
 // ── SVG helpers ──────────────────────────────────────────────────────────────
 const SVG_NS = "http://www.w3.org/2000/svg"
@@ -57,7 +58,7 @@ export class WaveformPlotter {
         this.height = height
         this.innerWidth = width - this.margin.left - this.margin.right
         this.innerHeight = height - this.margin.top - this.margin.bottom
-        this.laneHeight = this.innerHeight / 6
+        this.laneHeight = this.innerHeight / 7
 
         // Create or select container
         let container = document.querySelector(containerSelector)
@@ -455,6 +456,44 @@ export class WaveformPlotter {
                 ctx.globalAlpha = 1
                 ctx.restore()
             }
+
+            // Composite lane (lane index 6, below all string lanes)
+            ctx.save()
+            ctx.translate(0, 6 * laneHeight)
+
+            if (WAVEFORM_CONFIG.showStringLabels) {
+                ctx.fillStyle = "rgba(255, 255, 255, 0.93)"
+                ctx.font = "14px Inconsolata, monospace"
+                ctx.textBaseline = "middle"
+                ctx.textAlign = "left"
+                ctx.fillText(
+                    COMPOSITE_LABEL,
+                    -(margin.left - 4),
+                    laneHeight / 2,
+                )
+            }
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.93)"
+            ctx.lineWidth = 1.2
+            ctx.lineJoin = "round"
+            ctx.lineCap = "round"
+            ctx.globalAlpha = 0.85
+
+            if (this.lastComposite && this.lastComposite.length > 0) {
+                this.drawWaveformLine(
+                    this.lastComposite,
+                    laneHeight / 2,
+                    laneHeight / 2,
+                )
+            } else {
+                ctx.beginPath()
+                ctx.moveTo(0, laneHeight / 2)
+                ctx.lineTo(this.innerWidth, laneHeight / 2)
+                ctx.stroke()
+            }
+
+            ctx.globalAlpha = 1
+            ctx.restore()
         }
 
         ctx.restore()
