@@ -66,3 +66,12 @@ body {
   display: block;
   filter: drop-shadow(0 0 12px rgba(0, 0, 0, 0.6));
 }
+
+@keyframes selector-next-pulse {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(231, 168, 93, 0)); }
+  50%       { filter: drop-shadow(0 0 14px rgba(231, 168, 93, 1)) drop-shadow(0 0 6px rgba(231, 168, 93, 0.9)); }
+}
+
+.selector-next-pulsing {
+  animation: selector-next-pulse 1.8s ease-in-out infinite;
+}

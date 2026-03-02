@@ -42,6 +42,7 @@ export class Selector {
     >
     private prevArrow?: d3.Selection<SVGPathElement, unknown, null, undefined>
     private nextArrow?: d3.Selection<SVGPathElement, unknown, null, undefined>
+    private nextArrowGroup?: d3.Selection<SVGGElement, unknown, null, undefined>
 
     constructor(container: HTMLElement) {
         this.container = container
@@ -183,6 +184,14 @@ export class Selector {
                 undefined
             >
 
+            // Strip the baked-in orange glow from the next arrow group so
+            // arrows are glow-free by default; the pulse class adds it back
+            // only when needed.
+            this.nextArrowGroup = this.svg.select(
+                "#selector-next-group",
+            ) as unknown as d3.Selection<SVGGElement, unknown, null, undefined>
+            this.nextArrowGroup.attr("filter", null)
+
             this.renderArrows()
 
             // Pill click → start
@@ -221,6 +230,7 @@ export class Selector {
         this.nextArrow!.on("click", () => {
             if (this.isAnimating || this.currentIndex >= this.modes.length - 1)
                 return
+            this.stopPulse()
             const newIndex = this.currentIndex + 1
             onModeChange(newIndex)
             this.transitionTo(newIndex, "next")
@@ -254,6 +264,7 @@ export class Selector {
                         this.labelIncoming!.attr("opacity", 0)
                         this.isAnimating = false
                         this.currentIndex = newIndex
+                        this.startPulse()
                         resolve()
                     })
                 return
@@ -297,6 +308,18 @@ export class Selector {
         })
     }
 
+    private startPulse(): void {
+        if (!this.nextArrowGroup || this.modes.length <= 1) return
+        const el = this.nextArrowGroup.node()
+        if (el) el.classList.add("selector-next-pulsing")
+    }
+
+    private stopPulse(): void {
+        if (!this.nextArrowGroup) return
+        const el = this.nextArrowGroup.node()
+        if (el) el.classList.remove("selector-next-pulsing")
+    }
+
     private renderArrows(): void {
         if (!this.prevArrow || !this.nextArrow) return
 
@@ -306,7 +329,6 @@ export class Selector {
 
         this.prevArrow
             .attr("stroke-opacity", prevActive ? "1" : "0.33")
-            .attr("filter", prevActive ? "url(#selector-prev-glow)" : null)
             .style("cursor", prevActive ? "pointer" : "default")
             .attr("pointer-events", prevActive ? "all" : "none")
 
