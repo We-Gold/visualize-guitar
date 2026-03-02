@@ -256,8 +256,10 @@ export class WaveformPlotter {
 
         // Two eighth notes joined by a beam, centred vertically
         const noteY = H / 2 + 10
-        const stemTop = noteY - 14
-        const beamY = stemTop + 2
+        const stem1TopX = 8.5
+        const stem1TopY = noteY - 14
+        const stem2TopX = 15.5
+        const stem2TopY = stem1TopY - 3
 
         // Notehead 1
         g.appendChild(
@@ -286,10 +288,10 @@ export class WaveformPlotter {
         // Stem 1
         g.appendChild(
             makeSvgEl("line", {
-                x1: "8.5",
+                x1: String(stem1TopX),
                 y1: String(noteY - 1.5),
-                x2: "8.5",
-                y2: String(stemTop),
+                x2: String(stem1TopX),
+                y2: String(stem1TopY),
                 stroke: baseStroke,
                 "stroke-width": "1.5",
                 fill: "none",
@@ -298,26 +300,26 @@ export class WaveformPlotter {
         // Stem 2
         g.appendChild(
             makeSvgEl("line", {
-                x1: "15.5",
+                x1: String(stem2TopX),
                 y1: String(noteY - 4.5),
-                x2: "15.5",
-                y2: String(stemTop - 3),
+                x2: String(stem2TopX),
+                y2: String(stem2TopY),
                 stroke: baseStroke,
                 "stroke-width": "1.5",
                 fill: "none",
             }),
         )
-        // Beam
+        // Beam — line connecting the exact tops of both stems
         g.appendChild(
-            makeSvgEl("rect", {
-                x: "8.5",
-                y: String(beamY),
-                width: "7",
-                height: "2.5",
-                rx: "1",
-                fill: baseStroke,
-                stroke: "none",
-                transform: `rotate(-12 8.5 ${beamY})`,
+            makeSvgEl("line", {
+                x1: String(stem1TopX),
+                y1: String(stem1TopY),
+                x2: String(stem2TopX),
+                y2: String(stem2TopY),
+                stroke: baseStroke,
+                "stroke-width": "2.5",
+                "stroke-linecap": "square",
+                fill: "none",
             }),
         )
 
