@@ -83,13 +83,41 @@ export class MidiViewer {
             right: "20px",
             zIndex: "10",
             display: "none", // hidden by default
-            flexDirection: "row",
+            flexDirection: "column",
             alignItems: "center",
-            gap: "8px",
+            gap: "4px",
         })
         appContainer.appendChild(this.wrapper)
 
         this.container = this.wrapper
+
+        // ── Label ─────────────────────────────────────────────────────────────
+        const label = document.createElement("div")
+        label.textContent = "Notes"
+        const nowBarX =
+            this.margin.left + this.innerWidth * MIDI_VIEWER_CONFIG.nowFraction
+        Object.assign(label.style, {
+            color: "rgba(255,255,255,0.45)",
+            fontFamily: "Inconsolata, monospace",
+            fontSize: "12px",
+            letterSpacing: "0.06em",
+            userSelect: "none",
+            alignSelf: "flex-start",
+            marginLeft: `${nowBarX}px`,
+            transform: "translateX(-50%)",
+        })
+        this.wrapper.appendChild(label)
+
+        // ── Inner row (canvas + icon) ──────────────────────────────────────────
+        const row = document.createElement("div")
+        Object.assign(row.style, {
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: "8px",
+        })
+        this.wrapper.appendChild(row)
+        this.container = row
 
         // ── Canvas ────────────────────────────────────────────────────────────
         this.dpr = window.devicePixelRatio || 1

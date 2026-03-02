@@ -69,21 +69,43 @@ export class WaveformPlotter {
         }
         this.container = container as HTMLElement
 
-        // Container becomes an absolute-positioned flex row (icon left, canvas right)
+        // Container becomes an absolute-positioned flex column (label on top, row below)
         Object.assign(this.container.style, {
             position: "absolute",
             bottom: "20px",
             right: "20px",
             zIndex: "10",
             display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "4px",
+        })
+
+        // ── Label ────────────────────────────────────────────────────────────
+        const label = document.createElement("div")
+        label.textContent = "Waveforms"
+        Object.assign(label.style, {
+            color: "rgba(255,255,255,0.45)",
+            fontFamily: "Inconsolata, monospace",
+            fontSize: "12px",
+            letterSpacing: "0.06em",
+            userSelect: "none",
+        })
+        this.container.appendChild(label)
+
+        // ── Inner row (icons + canvas) ────────────────────────────────────────
+        const row = document.createElement("div")
+        Object.assign(row.style, {
+            display: "flex",
             flexDirection: "row",
             alignItems: "center",
             gap: "8px",
         })
+        this.container.appendChild(row)
 
         // ── Toggle icon ──────────────────────────────────────────────────────
         const iconSvg = this.buildToggleIcon()
-        this.container.appendChild(iconSvg)
+        row.appendChild(iconSvg)
 
         // ── Canvas ───────────────────────────────────────────────────────────
         // Create canvas — scale by devicePixelRatio for sharp rendering on HiDPI
@@ -95,14 +117,14 @@ export class WaveformPlotter {
         this.canvas.style.height = `${height}px`
         this.canvas.style.display = "block"
         this.canvas.style.borderRadius = "4px"
-        this.container.appendChild(this.canvas)
+        row.appendChild(this.canvas)
 
         this.ctx = this.canvas.getContext("2d")!
         this.ctx.scale(this.dpr, this.dpr)
 
         // ── Music-note view-switch icon (right of canvas) ────────────────────
         const musicNoteIcon = this.buildMusicNoteIcon()
-        this.container.appendChild(musicNoteIcon)
+        row.appendChild(musicNoteIcon)
 
         // Build right-edge fade gradient once (in inner coordinate space)
         const fadeStart = this.innerWidth * (1 - WAVEFORM_CONFIG.fadePercent)
@@ -219,10 +241,12 @@ export class WaveformPlotter {
 
     // ── Music-note switch icon ───────────────────────────────────────────────
 
-    private buildMusicNoteIcon(): SVGSVGElement {
+    private buildMusicNoteIcon(): HTMLElement {
         const W = 18
         const H = 60
-        const baseStroke = "rgba(255,255,255,0.55)"
+        const baseStroke = "white"
+        const dimColor = "rgba(255,255,255,0.55)"
+        const brightColor = "rgba(255,255,255,0.9)"
         const baseAttrs = {
             stroke: baseStroke,
             "stroke-width": "1.5",
@@ -230,23 +254,52 @@ export class WaveformPlotter {
             "stroke-linejoin": "round",
             fill: "none",
         }
+        const wrapper = document.createElement("div")
+        Object.assign(wrapper.style, {
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "0px",
+            cursor: "pointer",
+            flexShrink: "0",
+        })
+
+        const makeLabelEl = (text: string): HTMLElement => {
+            const el = document.createElement("div")
+            el.textContent = text
+            Object.assign(el.style, {
+                color: dimColor,
+                fontFamily: "Inconsolata, monospace",
+                fontSize: "15px",
+                letterSpacing: "0.06em",
+                userSelect: "none",
+                lineHeight: "1",
+            })
+            return el
+        }
+        wrapper.appendChild(makeLabelEl("View"))
+
         const svg = makeSvgEl("svg", {
             width: W,
             height: H,
             viewBox: `0 0 ${W} ${H}`,
         })
-        svg.style.cursor = "pointer"
-        svg.style.flexShrink = "0"
+        svg.style.display = "block"
+        svg.style.marginTop = "-10px"
+        svg.style.marginBottom = "-10px"
+        svg.style.opacity = "0.55"
 
-        svg.addEventListener("mouseenter", () => {
-            g.setAttribute("stroke", "rgba(255,255,255,0.9)")
-            g.setAttribute("fill", "rgba(255,255,255,0.9)")
+        wrapper.addEventListener("mouseenter", () => {
+            svg.style.opacity = "1"
+            for (const el of wrapper.querySelectorAll<HTMLElement>("div"))
+                el.style.color = brightColor
         })
-        svg.addEventListener("mouseleave", () => {
-            g.setAttribute("stroke", baseStroke)
-            g.setAttribute("fill", baseStroke)
+        wrapper.addEventListener("mouseleave", () => {
+            svg.style.opacity = "0.55"
+            for (const el of wrapper.querySelectorAll<HTMLElement>("div"))
+                el.style.color = dimColor
         })
-        svg.addEventListener("click", () => {
+        wrapper.addEventListener("click", () => {
             if (this.onViewToggleCb) this.onViewToggleCb()
         })
 
@@ -325,7 +378,9 @@ export class WaveformPlotter {
         )
 
         svg.appendChild(g)
-        return svg
+        wrapper.appendChild(svg)
+        wrapper.appendChild(makeLabelEl("Notes"))
+        return wrapper
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
