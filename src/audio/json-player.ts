@@ -42,6 +42,20 @@ export class JSONPlayer {
         }
     }
 
+    /** Load from an in-memory JSONAudioFile (used by the editor). */
+    loadData(
+        jsonData: JSONAudioFile,
+        playConfig?: PlayConfig,
+        loopConfig?: boolean | { intervalSeconds?: number },
+    ): void {
+        this.jsonData = jsonData
+        this.playConfig = playConfig ?? {
+            durationMultiplier: 1,
+            velocityMultiplier: 1,
+        }
+        this.loopConfig = loopConfig
+    }
+
     async play(): Promise<void> {
         if (!this.jsonData) {
             console.warn("No JSON file loaded. Call load() first.")

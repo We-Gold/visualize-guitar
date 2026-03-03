@@ -7,7 +7,7 @@ import type { ActiveNote } from "./string-animator"
 
 /** Center Y position for each string (1 = high e, 6 = low E).
  * Inverted from SVG slot order: string 6 (low E) is at the top of the guitar body. */
-const STRING_Y: Record<number, number> = {
+export const STRING_Y: Record<number, number> = {
     1: 347.04,
     2: 326.47,
     3: 305.89,
@@ -17,7 +17,7 @@ const STRING_Y: Record<number, number> = {
 }
 
 /** Fill color for each string's indicators */
-const STRING_COLORS: Record<number, string> = {
+export const STRING_COLORS: Record<number, string> = {
     1: "#2B2222",
     2: "#801110",
     3: "#8C3C24",
@@ -30,7 +30,7 @@ const STRING_COLORS: Record<number, string> = {
  * Center X of each fret wire, indexed by fret number (1–17).
  * Fret 0 = open string (no wire).
  */
-const FRET_X: Record<number, number> = {
+export const FRET_X: Record<number, number> = {
     1: 1153.6,
     2: 1098.6,
     3: 1045.6,
@@ -51,13 +51,13 @@ const FRET_X: Record<number, number> = {
 }
 
 /** X position of the nut (right edge of fretboard, near headstock) */
-const NUT_X = 1210
+export const NUT_X = 1210
 
 /** X center of the sound hole for strum indicators */
-const STRUM_X = 481
+export const STRUM_X = 481
 
 /** Radius for fret finger circles (matches existing SVG examples) */
-const FINGER_RADIUS = 7.443
+export const FINGER_RADIUS = 7.443
 
 /** Radius for strum indicator circles */
 const STRUM_RADIUS = 6
@@ -109,7 +109,7 @@ interface FingerAnimState {
  * Returns the midpoint between the fret wire and the previous fret wire (or the nut).
  * Returns null for open strings (fret 0).
  */
-function getFretFingerX(fret: number): number | null {
+export function getFretFingerX(fret: number): number | null {
     if (fret <= 0) return null
     const fretWireX = FRET_X[fret]
     if (fretWireX === undefined) return null
@@ -142,6 +142,12 @@ export class GuitarVisualizer {
     private svg: d3.Selection<SVGElement, unknown, null, undefined>
     private fingersGroup!: d3.Selection<SVGGElement, unknown, null, undefined>
     private strumsGroup!: d3.Selection<SVGGElement, unknown, null, undefined>
+    private staticFingersGroup!: d3.Selection<
+        SVGGElement,
+        unknown,
+        null,
+        undefined
+    >
     private stringAnimator: StringAnimator
     private notes: NoteWithKey[] = []
     private playStartTime = 0
@@ -191,6 +197,9 @@ export class GuitarVisualizer {
         this.fingersGroup = guitarGroup
             .append("g")
             .attr("id", "dynamic-fingers")
+        this.staticFingersGroup = guitarGroup
+            .append("g")
+            .attr("id", "static-fingers")
     }
 
     /**
@@ -413,6 +422,34 @@ export class GuitarVisualizer {
 
             state.lastKnownFretX = desiredX
         }
+    }
+
+    /**
+     * Place static finger circles for edit mode (no animation).
+     * placements: array of { string, fret } to show.
+     */
+    showStaticFingers(
+        placements: Array<{ string: number; fret: number }>,
+    ): void {
+        this.staticFingersGroup.selectAll("*").remove()
+        for (const p of placements) {
+            const x = getFretFingerX(p.fret)
+            if (x === null) continue
+            this.staticFingersGroup
+                .append("circle")
+                .attr("cx", x)
+                .attr("cy", STRING_Y[p.string])
+                .attr("r", FINGER_RADIUS)
+                .attr("fill", STRING_COLORS[p.string])
+                .attr("fill-opacity", 0.8)
+                .attr("stroke", "url(#dynamic-finger-stroke)")
+                .attr("stroke-width", 1.5)
+        }
+    }
+
+    /** Remove all static finger circles (exit edit mode). */
+    clearStaticFingers(): void {
+        this.staticFingersGroup.selectAll("*").remove()
     }
 
     /**

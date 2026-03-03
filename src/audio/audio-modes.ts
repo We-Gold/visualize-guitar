@@ -13,7 +13,10 @@ export interface JSONAudioMode {
     type: "json"
     name: string
     description?: string
-    jsonPath: string
+    /** Path to fetch from. Required for built-in modes; omitted for in-memory compositions. */
+    jsonPath?: string
+    /** In-memory composition data (used for editor-created pieces stored in localStorage). */
+    jsonData?: JSONAudioFile
     playConfig?: {
         durationMultiplier?: number
         velocityMultiplier?: number

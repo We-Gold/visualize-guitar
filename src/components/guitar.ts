@@ -7,11 +7,22 @@ const GUITAR_SVG_PATH = "./img/Guitar.svg"
 export class Guitar {
     private container: HTMLElement
     private visualizer?: GuitarVisualizer
+    private svgReadyCallbacks: Array<(svgEl: SVGElement) => void> = []
+    private svgEl?: SVGElement
 
     constructor(container: HTMLElement, onclick?: () => void) {
         this.container = container
         if (onclick) {
             this.container.addEventListener("click", onclick)
+        }
+    }
+
+    /** Register a callback that fires once the Guitar SVG has loaded and the visualizer is ready. */
+    onSvgReady(cb: (svgEl: SVGElement) => void): void {
+        if (this.svgEl) {
+            cb(this.svgEl)
+        } else {
+            this.svgReadyCallbacks.push(cb)
         }
     }
 
@@ -30,6 +41,11 @@ export class Guitar {
 
             // Initialize visualizer after SVG is in the DOM
             this.visualizer = new GuitarVisualizer(svg as unknown as SVGElement)
+
+            // Fire readiness callbacks
+            this.svgEl = svg as unknown as SVGElement
+            for (const cb of this.svgReadyCallbacks) cb(this.svgEl)
+            this.svgReadyCallbacks = []
         })
     }
 
@@ -60,6 +76,26 @@ export class Guitar {
     updateVisuals(currentTime: number): void {
         if (this.visualizer) {
             this.visualizer.updateFingersAndStrum(currentTime)
+        }
+    }
+
+    /**
+     * Show static finger circles for the given placements (edit mode).
+     */
+    showStaticFingers(
+        placements: Array<{ string: number; fret: number }>,
+    ): void {
+        if (this.visualizer) {
+            this.visualizer.showStaticFingers(placements)
+        }
+    }
+
+    /**
+     * Clear all static finger indicators (exit edit mode).
+     */
+    clearStaticFingers(): void {
+        if (this.visualizer) {
+            this.visualizer.clearStaticFingers()
         }
     }
 

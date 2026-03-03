@@ -320,6 +320,57 @@ export class Selector {
         if (el) el.classList.remove("selector-next-pulsing")
     }
 
+    /**
+     * Append a new mode to the end of the list and refresh arrow states.
+     * Safe to call after the selector has been initialised and started.
+     */
+    appendMode(mode: AudioMode): void {
+        this.modes.push(mode)
+        this.renderArrows()
+    }
+
+    /**
+     * Programmatically navigate to the given index, triggering the label
+     * transition animation. Safe to call at any time after the selector starts.
+     */
+    gotoIndex(index: number): void {
+        if (!this.isStarted || index === this.currentIndex) return
+        const direction =
+            index > this.currentIndex
+                ? "next"
+                : index < this.currentIndex
+                  ? "prev"
+                  : "none"
+        this.stopPulse()
+        this.transitionTo(index, direction)
+    }
+
+    /**
+     * Remove the first mode whose name matches, then update label and arrows.
+     * If the removed mode is currently displayed, transitions to the nearest neighbour.
+     */
+    removeModeByName(name: string): void {
+        const idx = this.modes.findIndex((m) => m.name === name)
+        if (idx < 0) return
+
+        const wasCurrentlyShown = idx === this.currentIndex
+        this.modes.splice(idx, 1)
+
+        // Clamp currentIndex after removal
+        if (this.currentIndex >= this.modes.length) {
+            this.currentIndex = Math.max(0, this.modes.length - 1)
+        } else if (idx < this.currentIndex) {
+            this.currentIndex--
+        }
+
+        // If the removed mode was the one on screen, update the label
+        if (wasCurrentlyShown && this.modes.length > 0) {
+            this.transitionTo(this.currentIndex, "none")
+        }
+
+        this.renderArrows()
+    }
+
     private renderArrows(): void {
         if (!this.prevArrow || !this.nextArrow) return
 
