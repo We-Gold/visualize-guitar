@@ -230,6 +230,8 @@ function applyResponsiveScale(): void {
     if (savedJson) {
         try {
             const savedData = JSON.parse(savedJson)
+            // Pre-populate the editor so the saved piece is ready to edit
+            editorState.loadData(savedData)
             modes.push({
                 type: "json",
                 name: "MY COMPOSITION",

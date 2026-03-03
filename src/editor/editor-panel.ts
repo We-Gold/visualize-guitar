@@ -49,6 +49,9 @@ function applyBaseBtn(el: HTMLButtonElement): void {
         // active state will re-apply
         el.dispatchEvent(new Event("_restoreStyle"))
     })
+    // Return focus to the document after a click so arrow-key shortcuts
+    // are not captured by the button element.
+    el.addEventListener("mouseup", () => el.blur())
 }
 
 function activeBtnStyle(el: HTMLButtonElement, active: boolean): void {
