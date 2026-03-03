@@ -578,7 +578,7 @@ export class EditorPanel {
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
             ctx.fillText(
-                "Click the fretboard to add notes",
+                "Click the guitar fretboard to add notes",
                 MARGIN.left + INNER_W / 2,
                 MARGIN.top + INNER_H / 2,
             )
