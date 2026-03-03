@@ -14,7 +14,7 @@ const WAVEFORM_CONFIG = {
 
 // Labels ordered top→bottom: string 6 (low E) at top, string 1 (high e) at bottom
 const STRING_LABELS = ["E", "A", "D", "G", "B", "e"]
-const COMPOSITE_LABEL = "all"
+const COMPOSITE_LABEL = "ALL"
 
 // ── SVG helpers ──────────────────────────────────────────────────────────────
 const SVG_NS = "http://www.w3.org/2000/svg"
