@@ -3,11 +3,14 @@ import type { JSONAudioFile } from "../audio/audio-modes"
 import type { EditorState } from "./editor-state"
 
 // ── Config ─────────────────────────────────────────────────────────────────────
+/** Visible viewport width of the piano roll (CSS px). */
 const CANVAS_W = 520
 const CANVAS_H = 160
 const MARGIN = { top: 8, right: 8, bottom: 18, left: 30 }
-const INNER_W = CANVAS_W - MARGIN.left - MARGIN.right
 const INNER_H = CANVAS_H - MARGIN.top - MARGIN.bottom
+
+/** Fixed horizontal scale: pixels per second of composition time. */
+const PX_PER_SEC = 80
 
 /** MIDI pitch range displayed vertically (full guitar range). */
 const MIDI_MIN = 38 // below E2 (40)
@@ -90,13 +93,21 @@ function makeRow(gap = "6px"): HTMLDivElement {
 
 export class EditorPanel {
     private wrapper: HTMLElement
+    private scrollWrapper!: HTMLDivElement
+    private canvasWrap!: HTMLDivElement
     private canvas: HTMLCanvasElement
     private ctx: CanvasRenderingContext2D
+    private playheadCanvas!: HTMLCanvasElement
+    private playheadCtx!: CanvasRenderingContext2D
     private dpr: number
     private state: EditorState
 
     private playBtn!: HTMLButtonElement
     private isPlaying = false
+
+    // Playhead state
+    private playStartToneTime: number | null = null
+    private playDuration = 0
 
     private playCb: (() => void) | null = null
     private stopCb: (() => void) | null = null
@@ -138,20 +149,66 @@ export class EditorPanel {
 
         this.buildControls()
 
-        // ── Piano roll canvas ────────────────────────────────────────────────
+        // ── Piano roll: scroll wrapper → canvas wrapper → (main canvas + playhead) ──
         this.dpr = window.devicePixelRatio || 1
+
+        // Inject a one-time stylesheet to hide the scrollbar visually
+        if (!document.getElementById("editor-panel-styles")) {
+            const style = document.createElement("style")
+            style.id = "editor-panel-styles"
+            style.textContent = `#editor-piano-scroll::-webkit-scrollbar { display: none; }`
+            document.head.appendChild(style)
+        }
+
+        // Outer scrollable viewport (fixed CSS width)
+        this.scrollWrapper = document.createElement("div")
+        this.scrollWrapper.id = "editor-piano-scroll"
+        Object.assign(this.scrollWrapper.style, {
+            width: `${CANVAS_W}px`,
+            overflowX: "auto",
+            overflowY: "hidden",
+            borderRadius: "4px",
+        })
+        this.scrollWrapper.style.setProperty("scrollbar-width", "none")
+        this.wrapper.appendChild(this.scrollWrapper)
+
+        // Inner container that expands with content
+        this.canvasWrap = document.createElement("div")
+        Object.assign(this.canvasWrap.style, {
+            position: "relative",
+            display: "inline-block",
+            width: `${CANVAS_W}px`,
+            height: `${CANVAS_H}px`,
+        })
+        this.scrollWrapper.appendChild(this.canvasWrap)
+
+        // Main piano-roll canvas
         this.canvas = document.createElement("canvas")
         this.canvas.width = Math.round(CANVAS_W * this.dpr)
         this.canvas.height = Math.round(CANVAS_H * this.dpr)
         this.canvas.style.width = `${CANVAS_W}px`
         this.canvas.style.height = `${CANVAS_H}px`
         this.canvas.style.display = "block"
-        this.canvas.style.borderRadius = "4px"
         this.canvas.style.cursor = "pointer"
-        this.wrapper.appendChild(this.canvas)
+        this.canvasWrap.appendChild(this.canvas)
 
         this.ctx = this.canvas.getContext("2d")!
         this.ctx.scale(this.dpr, this.dpr)
+
+        // Playhead overlay canvas (transparent, non-interactive)
+        this.playheadCanvas = document.createElement("canvas")
+        this.playheadCanvas.width = Math.round(CANVAS_W * this.dpr)
+        this.playheadCanvas.height = Math.round(CANVAS_H * this.dpr)
+        this.playheadCanvas.style.width = `${CANVAS_W}px`
+        this.playheadCanvas.style.height = `${CANVAS_H}px`
+        this.playheadCanvas.style.position = "absolute"
+        this.playheadCanvas.style.top = "0"
+        this.playheadCanvas.style.left = "0"
+        this.playheadCanvas.style.pointerEvents = "none"
+        this.canvasWrap.appendChild(this.playheadCanvas)
+
+        this.playheadCtx = this.playheadCanvas.getContext("2d")!
+        this.playheadCtx.scale(this.dpr, this.dpr)
 
         // Click on canvas → delete the clicked note
         this.canvas.addEventListener("click", (e) => this.onCanvasClick(e))
@@ -400,6 +457,7 @@ export class EditorPanel {
         this.isPlaying = false
         this.playBtn.textContent = "▶ PLAY"
         this.playBtn.style.color = "rgba(120,230,120,0.85)"
+        this.clearPlayhead()
     }
 
     // ── Save ─────────────────────────────────────────────────────────────────
@@ -443,16 +501,9 @@ export class EditorPanel {
 
     render(): void {
         const { ctx } = this
-        ctx.clearRect(0, 0, CANVAS_W, CANVAS_H)
-
-        // Background
-        ctx.fillStyle = "rgba(0,0,0,0.50)"
-        ctx.beginPath()
-        ;(ctx as any).roundRect(0, 0, CANVAS_W, CANVAS_H, 4)
-        ctx.fill()
-
         const notes = this.state.notes
         const cursor = this.state.timeCursor
+
         const endTime = Math.max(
             MIN_TIME_WINDOW,
             notes.length > 0
@@ -461,7 +512,30 @@ export class EditorPanel {
             cursor + this.state.noteDurationSeconds * 2,
         )
 
-        const pxPerSec = INNER_W / endTime
+        // ── Dynamic canvas width (scrollable content) ─────────────────────────
+        const totalContentW = Math.max(
+            CANVAS_W,
+            MARGIN.left + Math.ceil(endTime * PX_PER_SEC) + MARGIN.right,
+        )
+        const innerW = totalContentW - MARGIN.left - MARGIN.right
+
+        // Resize canvases when content grows
+        const targetPx = Math.round(totalContentW * this.dpr)
+        if (this.canvas.width !== targetPx) {
+            this.canvas.width = targetPx
+            this.canvas.style.width = `${totalContentW}px`
+            this.playheadCanvas.width = targetPx
+            this.playheadCanvas.style.width = `${totalContentW}px`
+            this.canvasWrap.style.width = `${totalContentW}px`
+        }
+        // Reset transform after any resize (resize clears canvas state)
+        ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
+
+        ctx.clearRect(0, 0, totalContentW, CANVAS_H)
+
+        // Background
+        ctx.fillStyle = "rgba(0,0,0,0.50)"
+        ctx.fillRect(0, 0, totalContentW, CANVAS_H)
 
         // ── Pitch lane guides ─────────────────────────────────────────────────
         for (let midi = MIDI_MIN; midi <= MIDI_MAX; midi++) {
@@ -474,7 +548,7 @@ export class EditorPanel {
             ctx.fillRect(
                 MARGIN.left,
                 y - PX_PER_SEMITONE,
-                INNER_W,
+                innerW,
                 PX_PER_SEMITONE,
             )
         }
@@ -512,7 +586,7 @@ export class EditorPanel {
         ctx.lineWidth = 1
         const beatSec = 60 / this.state.tempo
         for (let t = 0; t <= endTime; t += beatSec) {
-            const x = MARGIN.left + t * pxPerSec
+            const x = MARGIN.left + t * PX_PER_SEC
             ctx.beginPath()
             ctx.moveTo(x, MARGIN.top)
             ctx.lineTo(x, MARGIN.top + INNER_H)
@@ -524,8 +598,8 @@ export class EditorPanel {
 
         for (let i = 0; i < notes.length; i++) {
             const n = notes[i]
-            const x = MARGIN.left + n.time * pxPerSec
-            const w = Math.max(3, n.duration * pxPerSec - 1)
+            const x = MARGIN.left + n.time * PX_PER_SEC
+            const w = Math.max(3, n.duration * PX_PER_SEC - 1)
             const noteY =
                 MARGIN.top +
                 INNER_H -
@@ -553,8 +627,8 @@ export class EditorPanel {
             this.renderedNoteRects.push({ x, y, w, h, index: i })
         }
 
-        // ── Cursor line ───────────────────────────────────────────────────────
-        const cx = MARGIN.left + cursor * pxPerSec
+        // ── Edit cursor line ──────────────────────────────────────────────────
+        const cx = MARGIN.left + cursor * PX_PER_SEC
         ctx.save()
         ctx.shadowColor = "rgba(255,180,60,0.9)"
         ctx.shadowBlur = 6
@@ -569,7 +643,7 @@ export class EditorPanel {
         // ── Border ────────────────────────────────────────────────────────────
         ctx.strokeStyle = "rgba(255,255,255,0.08)"
         ctx.lineWidth = 1
-        ctx.strokeRect(MARGIN.left, MARGIN.top, INNER_W, INNER_H)
+        ctx.strokeRect(MARGIN.left, MARGIN.top, innerW, INNER_H)
 
         // ── "Empty" hint ──────────────────────────────────────────────────────
         if (notes.length === 0) {
@@ -579,10 +653,68 @@ export class EditorPanel {
             ctx.textBaseline = "middle"
             ctx.fillText(
                 "Click the guitar fretboard to add notes",
-                MARGIN.left + INNER_W / 2,
+                MARGIN.left + innerW / 2,
                 MARGIN.top + INNER_H / 2,
             )
         }
+
+        // ── Auto-scroll to keep edit cursor in view ───────────────────────────
+        const sl = this.scrollWrapper.scrollLeft
+        if (cx < sl + MARGIN.left) {
+            this.scrollWrapper.scrollLeft = Math.max(0, cx - MARGIN.left)
+        } else if (cx > sl + CANVAS_W - MARGIN.right) {
+            this.scrollWrapper.scrollLeft = cx - CANVAS_W + MARGIN.right
+        }
+    }
+
+    // ── Playback playhead ─────────────────────────────────────────────────────
+
+    /** Begin animating the playhead. Call right after the JSON player fires its onPlay. */
+    startPlayhead(toneStartTime: number, totalDuration: number): void {
+        this.playStartToneTime = toneStartTime
+        this.playDuration = totalDuration
+    }
+
+    /** Erase the playhead overlay. */
+    clearPlayhead(): void {
+        this.playStartToneTime = null
+        const phCtx = this.playheadCtx
+        phCtx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
+        phCtx.clearRect(0, 0, this.playheadCanvas.width / this.dpr, CANVAS_H)
+    }
+
+    /**
+     * Redraw the playhead at the current Tone.js time and scroll the roll
+     * to keep the playhead centred. Call every animation frame while in edit
+     * mode and playback is active.
+     */
+    updatePlayhead(toneNow: number): void {
+        if (this.playStartToneTime === null) return
+        const elapsed = toneNow - this.playStartToneTime
+        if (elapsed < 0) return
+        // Stop drawing once playback has advanced past the composition
+        if (this.playDuration > 0 && elapsed > this.playDuration + 0.1) return
+
+        const phCtx = this.playheadCtx
+        phCtx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
+        phCtx.clearRect(0, 0, this.playheadCanvas.width / this.dpr, CANVAS_H)
+
+        const px = MARGIN.left + elapsed * PX_PER_SEC
+
+        // Draw playhead (cyan, distinct from the orange edit cursor)
+        phCtx.save()
+        phCtx.shadowColor = "rgba(255,255,255,0.9)"
+        phCtx.shadowBlur = 6
+        phCtx.strokeStyle = "rgba(255,255,255,0.9)"
+        phCtx.lineWidth = 1.5
+        phCtx.beginPath()
+        phCtx.moveTo(px, MARGIN.top - 2)
+        phCtx.lineTo(px, MARGIN.top + INNER_H + 2)
+        phCtx.stroke()
+        phCtx.restore()
+
+        // Auto-scroll to keep playhead centred in the viewport
+        this.scrollWrapper.scrollLeft = Math.max(0, px - CANVAS_W / 2)
     }
 
     // ── Canvas click → delete note ────────────────────────────────────────────

@@ -27,6 +27,7 @@ function applyResponsiveScale(): void {
         { id: "frequency-plot", origin: "top right" },
         { id: "waveform-plot", origin: "bottom right" },
         { id: "midi-viewer", origin: "bottom right" },
+        { id: "editor-panel", origin: "bottom right" },
     ]
     for (const { id, origin } of panels) {
         const el = document.getElementById(id)
@@ -106,6 +107,11 @@ function applyResponsiveScale(): void {
             audioController.updateAnalyzerState()
             guitar.updateVisuals(Tone.now())
             midiViewer.updateVisuals(Tone.now())
+
+            // Drive playhead in editor mode
+            if (isInEditMode && editorPlaybackActive) {
+                editorPanel.updatePlayhead(Tone.now())
+            }
 
             // Poll for natural end of editor playback preview
             if (
@@ -237,6 +243,7 @@ function applyResponsiveScale(): void {
                 name: "MY COMPOSITION",
                 description: "Your saved composition",
                 jsonData: savedData,
+                loop: true,
             })
         } catch {
             // Corrupted storage — ignore
@@ -369,6 +376,14 @@ function applyResponsiveScale(): void {
         audioController.jsonPlayer.onPlay((t) => {
             guitar.load(data).then(() => guitar.startVisualization(t))
             guitar.clearStaticFingers()
+            // Start the cyan playhead at the confirmed audio start time
+            const maxTime = Math.max(
+                0,
+                ...data.tracks.flatMap((tr) =>
+                    tr.notes.map((n) => n.time + n.duration),
+                ),
+            )
+            editorPanel.startPlayhead(t, maxTime)
         })
         editorPlaybackActive = true
         audioController.jsonPlayer.play()
@@ -378,6 +393,7 @@ function applyResponsiveScale(): void {
         editorPlaybackActive = false
         audioController.jsonPlayer?.stop()
         guitar.stopVisualization()
+        editorPanel.clearPlayhead()
         updateStaticFingers()
     })
 
@@ -388,7 +404,9 @@ function applyResponsiveScale(): void {
             (m) => m.type === "json" && m.name === "MY COMPOSITION",
         )
         if (existingIndex >= 0) {
-            ;(modes[existingIndex] as JSONAudioMode).jsonData = data
+            const existing = modes[existingIndex] as JSONAudioMode
+            existing.jsonData = data
+            existing.loop = true
             return existingIndex
         } else {
             const newMode: AudioMode = {
@@ -396,6 +414,7 @@ function applyResponsiveScale(): void {
                 name: "MY COMPOSITION",
                 description: "Your saved composition",
                 jsonData: data,
+                loop: true,
             }
             modes.push(newMode)
             selector.appendMode(newMode)
