@@ -120,8 +120,8 @@ export class EditModeToggle {
                 width: 4,
                 height: 2.5,
                 rx: 0.8,
-                fill: "rgba(254,134,1,0.55)",
-                stroke: "rgba(254,134,1,0.80)",
+                fill: "rgba(255,255,255,0.20)",
+                stroke: "rgba(255,255,255,0.60)",
                 "stroke-width": "0.9",
             }),
         )
@@ -136,20 +136,20 @@ export class EditModeToggle {
 
         // Note head (filled oval)
         const noteHead = makeSvgEl("ellipse", {
-            cx: 15.5,
-            cy: 14.5,
+            cx: 17.5,
+            cy: 9.5,
             rx: 2.1,
             ry: 1.6,
-            transform: "rotate(-15, 15.5, 14.5)",
+            transform: "rotate(-15, 17.5, 9.5)",
         })
         note.appendChild(noteHead)
 
         // Stem
         const stem = makeSvgEl("line", {
-            x1: 17.5,
-            y1: 14,
-            x2: 17.5,
-            y2: 7.5,
+            x1: 19.5,
+            y1: 9,
+            x2: 19.5,
+            y2: 2.5,
             stroke: "rgba(255,255,255,0.55)",
             "stroke-width": "1.2",
             "stroke-linecap": "round",
@@ -158,7 +158,7 @@ export class EditModeToggle {
 
         // Flag
         const flag = makeSvgEl("path", {
-            d: "M17.5,7.5 C20.5,8.5 20.5,10.5 17.5,11.5",
+            d: "M19.5,2.5 C22.5,3.5 22.5,5.5 19.5,6.5",
             stroke: "rgba(255,255,255,0.55)",
             "stroke-width": "1.2",
             fill: "none",
