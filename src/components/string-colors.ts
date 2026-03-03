@@ -11,3 +11,6 @@ export const STRING_WAVEFORM_COLORS = Array.from(
     (_, i) => STRING_CONFIGS[i + 1].colors[2],
 )
 
+/** String name labels ordered top→bottom (string 6 low E at index 0, string 1 high e at index 5). */
+export const STRING_LABELS = ["E", "A", "D", "G", "B", "e"]
+

@@ -1,5 +1,6 @@
 import type { AnalyzerState } from "../audio/audio-controller"
-import { STRING_WAVEFORM_COLORS } from "./string-colors"
+import { STRING_WAVEFORM_COLORS, STRING_LABELS } from "./string-colors"
+import { makeSvgEl } from "../utils/svg"
 
 // ── Plot configuration ───────────────────────────────────────────────────────
 const WAVEFORM_CONFIG = {
@@ -12,21 +13,7 @@ const WAVEFORM_CONFIG = {
     showStringLabels: true,
 }
 
-// Labels ordered top→bottom: string 6 (low E) at top, string 1 (high e) at bottom
-const STRING_LABELS = ["E", "A", "D", "G", "B", "e"]
 const COMPOSITE_LABEL = "ALL"
-
-// ── SVG helpers ──────────────────────────────────────────────────────────────
-const SVG_NS = "http://www.w3.org/2000/svg"
-
-function makeSvgEl<K extends keyof SVGElementTagNameMap>(
-    tag: K,
-    attrs: Record<string, string | number>,
-): SVGElementTagNameMap[K] {
-    const el = document.createElementNS(SVG_NS, tag)
-    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v))
-    return el
-}
 
 export type WaveformMode = "composite" | "per-string"
 

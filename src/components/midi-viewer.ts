@@ -1,6 +1,7 @@
 import type { JSONAudioFile } from "../audio/audio-modes"
 import type { NoteWithKey } from "./guitar-visualizer"
 import { STRING_WAVEFORM_COLORS } from "./string-colors"
+import { makeSvgEl } from "../utils/svg"
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 const MIDI_VIEWER_CONFIG = {
@@ -25,18 +26,6 @@ const MIDI_VIEWER_CONFIG = {
     minWidthForLabel: 30,
     /** Padding in semitones above/below the pitch range. */
     pitchPadding: 2,
-}
-
-// ── SVG helpers ───────────────────────────────────────────────────────────────
-const SVG_NS = "http://www.w3.org/2000/svg"
-
-function makeSvgEl<K extends keyof SVGElementTagNameMap>(
-    tag: K,
-    attrs: Record<string, string | number>,
-): SVGElementTagNameMap[K] {
-    const el = document.createElementNS(SVG_NS, tag)
-    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v))
-    return el
 }
 
 export class MidiViewer {
