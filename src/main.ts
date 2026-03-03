@@ -7,6 +7,26 @@ import { WaveformPlotter } from "./components/waveform-plotter"
 import { AudioController } from "./audio/audio-controller"
 import { audioModes } from "./audio/audio-modes"
 import { MidiViewer } from "./components/midi-viewer"
+
+// ── Responsive scaling ───────────────────────────────────────────────────────
+/** Viewport height at which the overlay panels are designed (MacBook Air dev baseline). */
+const REFERENCE_HEIGHT = 862
+
+function applyResponsiveScale(): void {
+    const scale = Math.min(1, window.innerHeight / REFERENCE_HEIGHT)
+    const panels: Array<{ id: string; origin: string }> = [
+        { id: "frequency-plot", origin: "top right" },
+        { id: "waveform-plot", origin: "bottom right" },
+        { id: "midi-viewer", origin: "bottom right" },
+    ]
+    for (const { id, origin } of panels) {
+        const el = document.getElementById(id)
+        if (!el) continue
+        el.style.transformOrigin = origin
+        el.style.transform = `scale(${scale})`
+    }
+}
+
 ;(async () => {
     const audioController = new AudioController()
     await audioController.init()
@@ -19,6 +39,10 @@ import { MidiViewer } from "./components/midi-viewer"
 
     // Create MIDI viewer (hidden by default; shares the same screen slot)
     const midiViewer = new MidiViewer(document.getElementById("app")!)
+
+    // Apply initial scale and keep in sync on resize
+    applyResponsiveScale()
+    window.addEventListener("resize", applyResponsiveScale)
 
     // Toggle between waveform and MIDI views
     let showingMidi = false
