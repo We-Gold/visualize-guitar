@@ -34,6 +34,15 @@ The output of the preprocessing code is stored in `public/data/the-last-of-us.js
 
 The `public/data` directory also contains other JSON files that are used for the more educational phases of the website (playing just one string, chord progression, etc.). These were created manually based on the output of the preprocessing code.
 
+## Non-Obvious Features
+
+I hope everythign in the interface is clear, but here are a few key details.
+
+- The main view of the website does not allow interaction with the guitar. 
+- You have to click the selector at the top to start it playing, and you use the arrows next to it to move through different audio modes in order.
+- If you click the edit button to the left of the selector, this will bring you to the editor mode. You click on the string in the fretboard (the part of the guitar with vertical lines) to add them, and you can use the arrow keys or buttons to move through the timeline. You have to click off the right side of the fretboard to add an open string (without a finger on the fretboard).
+- You click the "MAIN VIEW" button to play the created song in the main view with the plots.
+
 ## Running the Project Locally
 
 To run the project locally, follow these steps:
