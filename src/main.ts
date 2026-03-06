@@ -16,6 +16,7 @@ import { EditorState, computeNoteMidi } from "./editor/editor-state"
 import { EditorPanel } from "./editor/editor-panel"
 import { EditModeToggle } from "./editor/edit-mode-toggle"
 import { GuitarEditOverlay } from "./editor/guitar-edit-overlay"
+import { InfoModal } from "./components/info-modal"
 
 // ── Responsive scaling ───────────────────────────────────────────────────────
 /** Viewport height at which the overlay panels are designed (MacBook Air dev baseline). */
@@ -258,6 +259,9 @@ function applyResponsiveScale(): void {
 
     const guitar = new Guitar(document.getElementById("app")!)
     guitar.addGuitar()
+
+    // ── Info modal (top-right corner) ─────────────────────────────────────────
+    new InfoModal()
 
     // ── Edit mode toggle (pencil icon, left of selector) ─────────────────────
     const editToggle = new EditModeToggle(selectorContainer)

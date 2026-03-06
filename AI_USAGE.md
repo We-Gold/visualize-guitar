@@ -16,3 +16,4 @@ Agentic AI was used for parts of the following features/actions:
 - Migrate plots from D3 to Canvas
 - Create initial editor component
 - Create notes (midi) viewer component
+- Creating the info modal
