@@ -18,11 +18,23 @@ import { EditModeToggle } from "./editor/edit-mode-toggle"
 import { GuitarEditOverlay } from "./editor/guitar-edit-overlay"
 import { InfoModal } from "./components/info-modal"
 
+// ── Mobile detection ────────────────────────────────────────────────────────
+const MOBILE_QUERY = "(pointer: coarse) and (max-width: 1024px)"
+
+function isMobile(): boolean {
+    return window.matchMedia(MOBILE_QUERY).matches
+}
+
+function applyMobileMode(): void {
+    document.body.classList.toggle("mobile", isMobile())
+}
+
 // ── Responsive scaling ───────────────────────────────────────────────────────
 /** Viewport height at which the overlay panels are designed (MacBook Air dev baseline). */
 const REFERENCE_HEIGHT = 862
 
 function applyResponsiveScale(): void {
+    if (isMobile()) return
     const scale = Math.min(1, window.innerHeight / REFERENCE_HEIGHT)
     const panels: Array<{ id: string; origin: string }> = [
         { id: "frequency-plot", origin: "top right" },
@@ -76,6 +88,11 @@ function applyResponsiveScale(): void {
             }
         }, 300)
     })
+
+    // Apply initial mobile class and keep in sync on resize / orientation change
+    applyMobileMode()
+    window.addEventListener("resize", applyMobileMode)
+    window.addEventListener("orientationchange", applyMobileMode)
 
     // Apply initial scale and keep in sync on resize
     applyResponsiveScale()

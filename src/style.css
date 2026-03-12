@@ -27,16 +27,18 @@ body {
 
 #background {
   /* z-index: 0; */
-  position: absolute;
-  width: 200%;
-  height: 200%;
+  position: fixed;
+  width: 200vmax;
+  height: 200vmax;
+  left: 50%;
+  top: 50%;
   background: radial-gradient(
     90% 70% at 64% 65%,
     rgba(0, 0, 0, 1) 0%,
     rgba(15, 15, 15, 1) 50%,
     rgba(102, 102, 102, 1) 100%
   );
-  transform: rotate(-30deg);
+  transform: translate(-50%, -50%) rotate(-30deg);
 }
 
 #frequency-plot {
@@ -65,6 +67,35 @@ body {
 #selector-svg {
   display: block;
   filter: drop-shadow(0 0 12px rgba(0, 0, 0, 0.6));
+}
+
+/* ── Mobile mode ───────────────────────────────────────────────────────────── */
+body.mobile #frequency-plot,
+body.mobile #waveform-plot,
+body.mobile #midi-viewer,
+body.mobile #editor-panel,
+body.mobile #edit-mode-toggle,
+body.mobile #info-modal-btn {
+  display: none !important;
+}
+
+body.mobile #guitar-svg {
+  position: relative;
+  z-index: 1;
+}
+
+@media (orientation: portrait) {
+  body.mobile #guitar-svg {
+    width: 92vw;
+    height: auto;
+  }
+}
+
+@media (orientation: landscape) {
+  body.mobile #guitar-svg {
+    width: auto;
+    height: 80vh;
+  }
 }
 
 @keyframes selector-next-pulse {
