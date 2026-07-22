@@ -53,9 +53,6 @@ body {
   font-family: 'Inconsolata', monospace;
 }
 
-#waveform-plot svg {
-}
-
 #selector-container {
   position: absolute;
   top: 24px;
@@ -66,6 +63,7 @@ body {
 
 #selector-svg {
   display: block;
+  overflow: visible;
   filter: drop-shadow(0 0 12px rgba(0, 0, 0, 0.6));
 }
 

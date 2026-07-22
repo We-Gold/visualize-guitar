@@ -17,6 +17,7 @@ import { EditorPanel } from "./editor/editor-panel"
 import { EditModeToggle } from "./editor/edit-mode-toggle"
 import { GuitarEditOverlay } from "./editor/guitar-edit-overlay"
 import { InfoModal } from "./components/info-modal"
+import { MobileWarningModal } from "./components/mobile-warning-modal"
 
 // ── Mobile detection ────────────────────────────────────────────────────────
 const MOBILE_QUERY = "(pointer: coarse) and (max-width: 1024px)"
@@ -93,6 +94,8 @@ function applyResponsiveScale(): void {
     applyMobileMode()
     window.addEventListener("resize", applyMobileMode)
     window.addEventListener("orientationchange", applyMobileMode)
+
+    if (isMobile()) new MobileWarningModal()
 
     // Apply initial scale and keep in sync on resize
     applyResponsiveScale()
