@@ -68,6 +68,16 @@ export class MobileWarningModal {
             "This site is designed for laptop-size screens. On mobile, some panels are hidden and you may notice performance issues."
         card.appendChild(body)
 
+        const soundWarning = document.createElement("div")
+        Object.assign(soundWarning.style, {
+            fontSize: "15px",
+            lineHeight: "1.6",
+            fontStyle: "italic",
+            color: "rgba(255,255,255,0.75)",
+        })
+        soundWarning.textContent = "Sound may also not work on mobile right now."
+        card.appendChild(soundWarning)
+
         const button = document.createElement("div")
         Object.assign(button.style, {
             marginTop: "8px",
