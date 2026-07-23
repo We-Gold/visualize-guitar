@@ -75,7 +75,7 @@ export class MobileWarningModal {
             fontStyle: "italic",
             color: "rgba(255,255,255,0.75)",
         })
-        soundWarning.textContent = "Sound may also not work on mobile right now."
+        soundWarning.textContent = "Also, make sure silent mode is off."
         card.appendChild(soundWarning)
 
         const button = document.createElement("div")
